@@ -1,10 +1,37 @@
-import { useState, useMemo } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, LabelList,
-  ScatterChart, Scatter,
-} from "recharts";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Singletrack Density Dashboard</title>
+  <!-- React 18 -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Recharts (UMD build) -->
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <!-- Babel Standalone (transpiles JSX in the browser) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { background: #09130e; }
+    /* Prevent iOS font-size inflation */
+    body { -webkit-text-size-adjust: 100%; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
+  <script type="text/babel">
+    /* ── Pull React hooks and Recharts components from CDN globals ── */
+    const { useState, useMemo } = React;
+    const {
+      BarChart, Bar, XAxis, YAxis, CartesianGrid,
+      Tooltip, ResponsiveContainer, Cell, LabelList,
+      ScatterChart, Scatter,
+    } = Recharts;
+
+    /* ── Component source (auto-generated from singletrack-density.jsx) ── */
 // ── Seed & constants ──────────────────────────────────────────────
 const SEED = [
   { city: "East Burke, VT",          population: 150,    trails: 100, areaSqMi: 47.0,  milesAdded5yr: null },
@@ -147,7 +174,7 @@ function ScatterTip({ active, payload, T, units, highlight }) {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────
-export default function Dashboard() {
+function Dashboard() {
   const [locs,        setLocs]        = useState(() => SEED.map(enrich));
   const [highlight,   setHighlight]   = useState(DEFAULT_HIGHLIGHT);
   const [panelTab,    setPanelTab]    = useState(null);  // null | 'add' | 'highlight'
@@ -907,3 +934,12 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+    /* ── Mount ── */
+    const container = document.getElementById("root");
+    const root = ReactDOM.createRoot(container);
+    root.render(<Dashboard />);
+  </script>
+</body>
+</html>
