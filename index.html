@@ -1,945 +1,799 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Singletrack Density Dashboard</title>
-  <!-- React 18 -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- Recharts (UMD build) -->
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-  <!-- Babel Standalone (transpiles JSX in the browser) -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body { background: #09130e; }
-    /* Prevent iOS font-size inflation */
-    body { -webkit-text-size-adjust: 100%; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Singletrack Density Dashboard</title>
+<style>
+  :root[data-theme="dark"]{
+    --page:#09130e; --card:#0f1f16; --border:#1a3320;
+    --text:#e8ede9; --sub:#4b7a5a; --dim:#2d5c3a;
+    --input:#0c1a11; --inputbdr:#2a4030; --thead:#0b1910;
+    --alt:rgba(255,255,255,.015); --grid:#162b1e;
+    --blue:#4895EF; --indigo:#818CF8; --orange:#F97316; --violet:#A78BFA;
+    --good:#4895EF; --mid:#7CBFE8; --poor:#2d5c3a; --error:#EF4444;
+    --shadow:0 8px 28px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --page:#E8E8EA; --card:#FFFFFF; --border:#D1D5DB;
+    --text:#111827; --sub:#374151; --dim:#9CA3AF;
+    --input:#F9FAFB; --inputbdr:#D1D5DB; --thead:#F3F4F6;
+    --alt:rgba(0,0,0,.025); --grid:#E5E7EB;
+    --blue:#1D6FD8; --indigo:#4F46E5; --orange:#D05A0A; --violet:#6D28D9;
+    --good:#1D6FD8; --mid:#5B9BD5; --poor:#9CA3AF; --error:#DC2626;
+    --shadow:0 8px 28px rgba(0,0,0,.12);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--page); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:18px 14px 48px; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:13px;overflow:hidden}
+  button{font-family:inherit}
+
+  /* Header */
+  header{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:18px}
+  header h1{margin:0;font-size:23px;font-weight:800;letter-spacing:-.5px}
+  header p{margin:3px 0 0;font-size:12px;color:var(--dim)}
+  .hdr-left{flex:1;min-width:180px}
+  .hdr-ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .seg{display:flex;background:var(--input);border:1px solid var(--border);border-radius:22px;padding:3px;gap:2px}
+  .seg button{background:transparent;color:var(--sub);border:none;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap}
+  .seg button.on{background:var(--blue);color:#fff}
+  .theme-btn{background:var(--input);border:1px solid var(--border);border-radius:22px;padding:7px 14px;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap}
+
+  /* Collapsible section header */
+  .sec-hdr{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:transparent;border:none;cursor:pointer;min-height:44px;text-align:left}
+  .sec-hdr .ttl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--sub)}
+  .sec-hdr .badge{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:700;margin-left:8px}
+  .sec-hdr .arrow{color:var(--dim);font-size:12px;margin-left:8px;flex-shrink:0}
+  .sec-hdr.open{border-bottom:1px solid var(--border)}
+  .sec-body{padding:16px 18px}
+  .hdr-flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  /* Tabs (Add / Highlight) */
+  .tab-bar{display:flex;align-items:stretch}
+  .tab-bar.open{border-bottom:1px solid var(--border)}
+  .tab-btn{background:transparent;border:none;border-bottom:2.5px solid transparent;padding:11px 18px;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);white-space:nowrap;min-height:44px}
+  .tab-btn.on-add{color:var(--blue);border-bottom-color:var(--blue)}
+  .tab-btn.on-hl{color:var(--orange);border-bottom-color:var(--orange)}
+  .reset-wrap{margin-left:auto;display:flex;align-items:center;padding-right:14px}
+  .reset-btn{background:transparent;color:var(--dim);border:1px solid transparent;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:default;transition:all .15s;min-height:36px}
+  .reset-btn.active{color:var(--sub);border-color:var(--border);cursor:pointer}
+  .reset-btn.confirm{color:var(--orange);border-color:var(--orange);background:rgba(249,115,22,.1);cursor:pointer}
+
+  /* Forms */
+  .grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px}
+  label.fld{display:block;font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  label.fld .opt{color:var(--dim);font-weight:400;margin-left:4px;text-transform:none}
+  input,select{width:100%;background:var(--input);border:1px solid var(--inputbdr);border-radius:7px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;min-height:38px}
+  input.err{border-color:var(--error)}
+  .err-msg{font-size:10px;color:var(--error);margin-top:2px}
+  .btn-primary{margin-top:12px;background:var(--blue);border:none;border-radius:7px;padding:9px 20px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;min-height:40px}
+  .btn-primary:hover{opacity:.85}
+
+  /* Pills */
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{background:transparent;color:var(--sub);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;line-height:1;transition:all .15s;white-space:nowrap}
+  .pill .cnt{opacity:.65;font-size:11px}
+  .pill.on-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+  .pill.on-indigo{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .pill.on-violet{background:var(--violet);border-color:var(--violet);color:#fff}
+  .pill.on-sub{background:var(--sub);border-color:var(--sub);color:#fff}
+  .pill.on-orange{background:var(--orange);border-color:var(--orange);color:#fff}
+
+  .hint{font-size:11px;font-weight:600;color:var(--sub);margin:10px 0 12px}
+  .hint .hl-note{color:var(--orange);font-weight:700;margin-left:6px}
+  .note-dim{font-size:11px;color:var(--dim)}
+
+  /* Bar chart (pure divs) */
+  .chart-scroll{overflow-y:auto;max-height:500px;border-radius:4px}
+  .bar-row{display:flex;align-items:center;gap:8px;min-height:28px;padding:2px 0}
+  .bar-label{width:150px;flex-shrink:0;text-align:right;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-label.hl{color:var(--orange);font-weight:700;font-size:12px}
+  .bar-track{flex:1;height:20px;background:var(--alt);border-radius:0 4px 4px 0;position:relative}
+  .bar-fill{height:100%;border-radius:0 4px 4px 0;min-width:2px;transition:width .25s}
+  .bar-val{width:52px;flex-shrink:0;font-size:10px;color:var(--dim);font-family:ui-monospace,monospace}
+  .legend{margin-top:10px;display:flex;gap:14px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+  .legend .right{margin-left:auto}
+
+  /* Scatter */
+  .scatter-box svg{width:100%;height:auto;display:block}
+  .scatter-detail{margin-top:8px;font-size:12px;color:var(--sub);min-height:18px}
+
+  /* Gap calculator */
+  .gap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .gap-card{border-radius:8px;padding:12px 14px;border:1px solid var(--border)}
+  .gap-card .lab{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .gap-card .val{font-size:20px;font-weight:800;font-family:ui-monospace,monospace;line-height:1.3}
+  .gap-card .sub{font-size:10px;color:var(--dim);margin-top:2px}
+  .gap-note{margin-top:12px;padding:9px 14px;background:var(--alt);border:1px solid var(--border);border-radius:7px;font-size:11px;color:var(--sub);font-style:italic;line-height:1.6}
+  .gap-note strong{color:var(--text);font-style:normal}
+  .gap-note .warn{color:var(--orange);font-style:normal;font-weight:600;margin-left:6px}
+  .gap-lead{background:rgba(72,149,239,.1);border:1px solid rgba(72,149,239,.35);border-radius:8px;padding:13px 16px;font-size:13px}
+  .seg-sm{display:flex;gap:5px;margin-top:2px}
+  .seg-sm button{flex:1;background:transparent;color:var(--sub);border:1.5px solid var(--border);border-radius:6px;padding:8px 6px;font-size:10px;font-weight:700;cursor:pointer;min-height:40px}
+  .seg-sm button.on{background:var(--orange);border-color:var(--orange);color:#fff}
+
+  /* Table */
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{padding:9px 12px;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none;white-space:nowrap;border-bottom:1px solid var(--border);background:var(--thead);color:var(--dim)}
+  th.active{color:var(--blue)}
+  td{padding:7px 12px;white-space:nowrap}
+  td.num{text-align:right;font-family:ui-monospace,monospace}
+  tr.alt{background:var(--alt)}
+  tr.hl-row{background:rgba(249,115,22,.08)}
+  tr.hl-row td:first-child{color:var(--orange);font-weight:700}
+  tr.hl-row{border-left:3px solid var(--orange)}
+  tr:not(.hl-row){border-left:3px solid transparent}
+
+  /* Highlight stats card */
+  .hl-card{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:13px 16px;min-width:230px}
+  .hl-card .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
+  .hl-card .name{font-weight:700;color:var(--orange);font-size:13px}
+  .hl-card .tier{font-size:10px;background:rgba(249,115,22,.2);color:var(--orange);padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
+  .hl-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+  .hl-stats .k{color:var(--dim);margin-bottom:1px}
+  .hl-stats .v{font-family:ui-monospace,monospace;font-weight:700}
+  .hl-reset{margin-top:7px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--dim);font-size:11px;cursor:pointer;font-weight:600}
+
+  /* Disclaimer */
+  .disclaimer{margin-top:20px;padding:16px 18px;background:var(--alt);border:1px solid var(--border);border-radius:12px}
+  .disclaimer .ttl{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .disclaimer p{font-size:11px;color:var(--dim);line-height:1.7;margin:0 0 6px}
+  .disclaimer strong{color:var(--sub)}
+
+  @media (max-width:480px){
+    body{padding:12px 8px 40px}
+    .bar-label{width:118px;font-size:10px}
+    .bar-label.hl{font-size:11px}
+    .sec-body{padding:13px 12px}
+    .tab-btn{padding:11px 12px;font-size:11px}
+  }
+</style>
 </head>
 <body>
-  <div id="root"></div>
+<div class="wrap">
 
-  <script type="text/babel">
-    /* ── Pull React hooks and Recharts components from CDN globals ── */
-    const { useState, useMemo } = React;
-    const {
-      BarChart, Bar, XAxis, YAxis, CartesianGrid,
-      Tooltip, ResponsiveContainer, Cell, LabelList,
-      ScatterChart, Scatter,
-    } = Recharts;
-
-    /* ── Component source (auto-generated from singletrack-density.jsx) ── */
-// ── Seed & constants ──────────────────────────────────────────────
-const SEED = [
-  { city: "East Burke, VT",          population: 150,    trails: 100, areaSqMi: 47.0,  milesAdded5yr: null },
-  { city: "Copper Harbor, MI",        population: 100,    trails: 40,  areaSqMi: 8.2,   milesAdded5yr: null },
-  { city: "Downieville, CA",          population: 200,    trails: 80,  areaSqMi: 1.2,   milesAdded5yr: null },
-  { city: "Crested Butte, CO",        population: 1650,   trails: 450, areaSqMi: 3.2,   milesAdded5yr: null },
-  { city: "Carrabassett Valley, ME",  population: 750,    trails: 80,  areaSqMi: 117.0, milesAdded5yr: null },
-  { city: "Oakridge, OR",             population: 3200,   trails: 350, areaSqMi: 2.5,   milesAdded5yr: null },
-  { city: "Crosby, MN",               population: 2300,   trails: 70,  areaSqMi: 1.8,   milesAdded5yr: null },
-  { city: "Moab, UT",                 population: 5200,   trails: 150, areaSqMi: 4.3,   milesAdded5yr: null },
-  { city: "Brevard, NC",              population: 7700,   trails: 300, areaSqMi: 7.4,   milesAdded5yr: null },
-  { city: "Park City, UT",            population: 8400,   trails: 450, areaSqMi: 16.8,  milesAdded5yr: null },
-  { city: "Sedona, AZ",               population: 9600,   trails: 200, areaSqMi: 18.6,  milesAdded5yr: null },
-  { city: "Fruita, CO",               population: 14100,  trails: 130, areaSqMi: 3.6,   milesAdded5yr: null },
-  { city: "Anniston, AL",             population: 21000,  trails: 35,  areaSqMi: 45.2,  milesAdded5yr: null },
-  { city: "Marquette, MI",            population: 22100,  trails: 75,  areaSqMi: 23.9,  milesAdded5yr: null },
-  { city: "Squamish, BC",             population: 24000,  trails: 200, areaSqMi: 40.3,  milesAdded5yr: null },
-  { city: "Helena, MT",               population: 34000,  trails: 85,  areaSqMi: 46.0,  milesAdded5yr: null },
-  { city: "Harrisonburg, VA",         population: 51000,  trails: 110, areaSqMi: 17.5,  milesAdded5yr: null },
-  { city: "Bentonville, AR",          population: 64800,  trails: 300, areaSqMi: 49.6,  milesAdded5yr: null },
-  { city: "Ocala, FL",                population: 71700,  trails: 80,  areaSqMi: 44.8,  milesAdded5yr: null },
-  { city: "Castle Rock, CO",          population: 84000,  trails: 35,  areaSqMi: 34.8,  milesAdded5yr: null },
-  { city: "Santa Fe, NM",             population: 89000,  trails: 115, areaSqMi: 37.2,  milesAdded5yr: null },
-  { city: "Duluth, MN",               population: 88600,  trails: 100, areaSqMi: 87.2,  milesAdded5yr: null },
-  { city: "Bellingham, WA",           population: 96000,  trails: 120, areaSqMi: 26.6,  milesAdded5yr: null },
-  { city: "Chattanooga, TN",          population: 184000, trails: 125, areaSqMi: 143.1, milesAdded5yr: null },
-  { city: "Boise, ID",                population: 236000, trails: 190, areaSqMi: 83.9,  milesAdded5yr: null },
-  { city: "Austin, TX",               population: 980000, trails: 150, areaSqMi: 321.8, milesAdded5yr: null },
-];
-
-const DEFAULT_HIGHLIGHT = "Castle Rock, CO";
-const DEFAULT_BENCH     = "Bentonville, AR";
-const MI_TO_KM          = 1.60934;
-
-// ── Themes (color-blind safe: blue + orange + indigo) ─────────────
-const THEMES = {
-  dark: {
-    pageBg:   "#09130e", cardBg:   "#0f1f16", border:   "#1a3320",
-    text:     "#e8ede9", textSub:  "#4b7a5a", textDim:  "#2d5c3a",
-    inputBg:  "#0c1a11", inputBdr: "#2a4030",
-    tHead:    "#0b1910", tAlt:     "rgba(255,255,255,.013)", grid: "#162b1e",
-    blue:     "#4895EF", indigo:   "#818CF8", orange:   "#F97316",
-    violet:   "#A78BFA", good:     "#4895EF", mid:      "#7CBFE8",
-    poor:     "#2d5c3a", error:    "#EF4444",
-  },
-  light: {
-    pageBg:   "#E8E8EA", cardBg:   "#FFFFFF", border:   "#D1D5DB",
-    text:     "#111827", textSub:  "#374151", textDim:  "#9CA3AF",
-    inputBg:  "#F9FAFB", inputBdr: "#D1D5DB",
-    tHead:    "#F3F4F6", tAlt:     "rgba(0,0,0,.025)", grid: "#E5E7EB",
-    blue:     "#1D6FD8", indigo:   "#4F46E5", orange:   "#D05A0A",
-    violet:   "#6D28D9", good:     "#1D6FD8", mid:      "#5B9BD5",
-    poor:     "#9CA3AF", error:    "#DC2626",
-  },
-};
-
-const TIERS = [
-  { id: "micro", label: "< 5k",       min: 0,      max: 5000     },
-  { id: "small", label: "5k – 50k",   min: 5000,   max: 50000    },
-  { id: "mid",   label: "50k – 150k", min: 50000,  max: 150000   },
-  { id: "large", label: "150k+",      min: 150000, max: Infinity },
-];
-
-const UL = {
-  imperial: { trail: "mi",    per10k: "mi / 10k pop",    perCap: "pop / mi"       },
-  metric:   { trail: "km",    per10k: "km / 10k pop",    perCap: "pop / km"       },
-  both:     { trail: "mi·km", per10k: "mi·km / 10k pop", perCap: "pop / mi·km"   },
-};
-
-// ── Data helpers ──────────────────────────────────────────────────
-const enrich = (d) => ({
-  ...d,
-  milesper10k:   +((d.trails / (d.population / 10000)).toFixed(1)),
-  popPerMile:    +((d.population / d.trails).toFixed(1)),
-  trailsPerSqMi: d.areaSqMi ? +((d.trails / d.areaSqMi).toFixed(2)) : null,
-  growthPct:     d.milesAdded5yr != null && d.trails
-                   ? +((d.milesAdded5yr / d.trails * 100).toFixed(1)) : null,
-});
-
-const cvTrail  = (mi,  u) => u === "metric" ? mi  * MI_TO_KM : mi;
-const cvPer10k = (val, u) => u === "metric" ? val * MI_TO_KM : val;
-const cvPerCap = (val, u) => u === "metric" ? val / MI_TO_KM : val;
-
-const fmtShort = (v) => v >= 1000 ? (v / 1000).toFixed(1) + "k" : `${v}`;
-const fmtN     = (v) =>
-  typeof v === "number" ? v.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—";
-const fmtMoney = (v) =>
-  v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : "$" + (v / 1e3).toFixed(0) + "k";
-
-// ── Tooltip components ────────────────────────────────────────────
-function BarTip({ active, payload, T, units, highlight }) {
-  if (!active || !payload?.length) return null;
-  const d    = payload[0].payload;
-  const home = d.city === highlight;
-  const u    = UL[units];
-  const both = units === "both";
-  const t10k = both
-    ? `${fmtN(d.milesper10k)} mi / ${fmtN(d.milesper10k * MI_TO_KM)} km`
-    : fmtN(cvPer10k(d.milesper10k, units));
-  const tpc  = both
-    ? `${fmtN(d.popPerMile)} / mi · ${fmtN(d.popPerMile / MI_TO_KM)} / km`
-    : fmtN(cvPerCap(d.popPerMile, units));
-  const trl  = both
-    ? `${d.trails} mi / ${(d.trails * MI_TO_KM).toFixed(1)} km`
-    : `${fmtN(cvTrail(d.trails, units))} ${u.trail}`;
-  return (
-    <div style={{ background: T.cardBg, border: `1px solid ${home ? T.orange : T.border}`, borderRadius: 8, padding: "10px 14px", minWidth: 218, boxShadow: "0 8px 28px rgba(0,0,0,.45)", lineHeight: 1.75, fontSize: 12 }}>
-      <div style={{ fontWeight: 700, color: home ? T.orange : T.text, fontSize: 13, marginBottom: 5 }}>
-        {home ? "📍 " : ""}{d.city}
+  <header>
+    <div class="hdr-left">
+      <h1>Singletrack Density</h1>
+      <p>Trail access per capita &middot; <span id="cityCount">26</span> North American MTB destinations</p>
+    </div>
+    <div class="hdr-ctrl">
+      <div class="seg" id="unitSeg">
+        <button data-u="imperial" class="on">Imperial</button>
+        <button data-u="metric">Metric</button>
+        <button data-u="both">Both</button>
       </div>
-      <div style={{ color: T.blue }}>{u.per10k}: <strong>{t10k}</strong></div>
-      <div style={{ color: T.indigo }}>{u.perCap}: <strong>{tpc}</strong></div>
-      {d.trailsPerSqMi != null && <div style={{ color: T.mid }}>Trail / sq mi: <strong>{fmtN(d.trailsPerSqMi)}</strong></div>}
-      <div style={{ color: T.textDim, marginTop: 5, paddingTop: 5, borderTop: `1px solid ${T.border}` }}>
-        Pop: {d.population.toLocaleString()} · Trails: {trl} · Area: {d.areaSqMi} sq mi
+      <button class="theme-btn" id="themeBtn">&#9728; Light</button>
+    </div>
+  </header>
+
+  <!-- Add Location / Highlight panel -->
+  <section class="card">
+    <div class="tab-bar" id="tabBar">
+      <button class="tab-btn" id="tabAdd">+ Add Location <span id="tabAddArrow">&#9660;</span></button>
+      <button class="tab-btn" id="tabHl">&#128205; Highlight <span id="tabHlArrow">&#9660;</span></button>
+      <div class="reset-wrap"><button class="reset-btn" id="resetBtn">&#8634; Reset</button></div>
+    </div>
+    <div class="sec-body" id="addBody" style="display:none">
+      <div class="grid-form">
+        <div><label class="fld">City Name</label><input id="fCity" type="text" placeholder="Trail Town"><div class="err-msg" id="eCity"></div></div>
+        <div><label class="fld">Population</label><input id="fPop" type="number" min="0" placeholder="12000"><div class="err-msg" id="ePop"></div></div>
+        <div><label class="fld">Trail mi</label><input id="fTrails" type="number" min="0" placeholder="160"><div class="err-msg" id="eTrails"></div></div>
+        <div><label class="fld">City Area (sq mi)<span class="opt">opt</span></label><input id="fArea" type="number" min="0" placeholder="40"><div class="err-msg" id="eArea"></div></div>
+        <div><label class="fld">5yr Growth (mi)<span class="opt">opt</span></label><input id="fGrowth" type="number" min="0" placeholder="25"></div>
+      </div>
+      <button class="btn-primary" id="addBtn">Add Location</button>
+    </div>
+    <div class="sec-body" id="hlBody" style="display:none">
+      <div class="note-dim" style="margin-bottom:14px;font-weight:600;color:var(--sub)">
+        The highlighted city appears in orange throughout all charts and tables, and serves as the baseline in the Trail Gap Calculator. Castle Rock, CO is the default.
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1;min-width:200px">
+          <label class="fld">Highlighted City</label>
+          <select id="hlSelect"></select>
+          <div id="hlResetWrap"></div>
+        </div>
+        <div id="hlCard"></div>
       </div>
     </div>
-  );
-}
+  </section>
 
-function ScatterTip({ active, payload, T, units, highlight }) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0]?.payload;
-  if (!d?.city) return null;
-  const home = d.city === highlight;
-  const u    = UL[units];
-  return (
-    <div style={{ background: T.cardBg, border: `1px solid ${home ? T.orange : T.border}`, borderRadius: 8, padding: "10px 14px", minWidth: 218, boxShadow: "0 8px 28px rgba(0,0,0,.45)", lineHeight: 1.75, fontSize: 12 }}>
-      <div style={{ fontWeight: 700, color: home ? T.orange : T.text, fontSize: 13, marginBottom: 5 }}>
-        {home ? "📍 " : ""}{d.city}
-      </div>
-      <div style={{ color: T.textSub }}>Population: <strong style={{ color: T.text }}>{d.population.toLocaleString()}</strong></div>
-      <div style={{ color: T.textSub }}>Trail Miles: <strong style={{ color: T.text }}>
-        {d.trails} mi{units !== "imperial" ? ` / ${(d.trails * MI_TO_KM).toFixed(1)} km` : ""}
-      </strong></div>
-      <div style={{ color: T.blue }}>{u.per10k}: <strong>{fmtN(cvPer10k(d.milesper10k, units))}</strong></div>
-      <div style={{ color: T.indigo }}>{u.perCap}: <strong>{fmtN(cvPerCap(d.popPerMile, units))}</strong></div>
+  <!-- Population tier filter -->
+  <section class="card">
+    <button class="sec-hdr open" id="tierHdr">
+      <span class="hdr-flex"><span class="ttl">Population Tier Filter</span><span id="tierBadge"></span></span>
+      <span class="arrow" id="tierArrow">&#9650;</span>
+    </button>
+    <div class="sec-body" id="tierBody">
+      <div class="note-dim" style="margin-bottom:11px">Select one or more population ranges to scope the charts. The data table always shows all cities.</div>
+      <div class="pills" id="tierPills"></div>
+      <div class="note-dim" id="tierSummary" style="margin-top:10px"></div>
     </div>
-  );
+  </section>
+
+  <!-- Charts -->
+  <section class="card">
+    <button class="sec-hdr open" id="chartHdr">
+      <span class="hdr-flex"><span class="ttl">Charts</span><span class="badge" id="chartBadge"></span></span>
+      <span class="arrow" id="chartArrow">&#9650;</span>
+    </button>
+    <div class="sec-body" id="chartBody">
+      <div class="pills" id="modePills"></div>
+      <div class="hint" id="chartHint"></div>
+      <div id="chartArea"></div>
+      <div class="legend" id="chartLegend"></div>
+    </div>
+  </section>
+
+  <!-- Trail gap calculator -->
+  <section class="card">
+    <button class="sec-hdr open" id="gapHdr">
+      <span class="hdr-flex"><span class="ttl" style="color:var(--orange)">&#128205; Trail Gap Calculator</span><span class="note-dim" id="gapHdrCity"></span></span>
+      <span class="arrow" id="gapArrow">&#9650;</span>
+    </button>
+    <div class="sec-body" id="gapBody">
+      <div class="grid-form" style="margin-bottom:14px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
+        <div><label class="fld">Benchmark City</label><select id="benchSelect"></select></div>
+        <div><label class="fld">Compare By</label><div class="seg-sm" id="gapMetSeg"></div></div>
+        <div><label class="fld">Cost / Mile &mdash; Low ($)</label><input id="cLow" type="number" min="1" value="50000"></div>
+        <div><label class="fld">Cost / Mile &mdash; High ($)</label><input id="cHigh" type="number" min="1" value="150000"></div>
+      </div>
+      <div id="gapResults"></div>
+      <div id="gapNote"></div>
+    </div>
+  </section>
+
+  <!-- Master data table -->
+  <section class="card">
+    <button class="sec-hdr open" id="tblHdr">
+      <span class="hdr-flex"><span class="ttl" style="color:var(--blue)">Master Data</span><span class="note-dim" id="tblCount"></span></span>
+      <span class="arrow" id="tblArrow">&#9650;</span>
+    </button>
+    <div id="tblBody">
+      <div style="padding:8px 18px 10px;border-bottom:1px solid var(--border)">
+        <div class="note-dim" style="font-size:10px">Trail/sq mi uses municipal boundaries &mdash; small towns may show inflated values. Enter 5yr growth via the Add Location tab.<span id="tblUnitNote"></span></div>
+      </div>
+      <div class="tbl-scroll"><table><thead><tr id="tblHead"></tr></thead><tbody id="tblRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <div class="ttl">Data Disclaimer</div>
+    <p>Population figures and trail mileage are approximate estimates compiled from publicly available sources including municipal websites, local trail organizations, and community databases. Values reflect conditions at the time of compilation and may not represent current figures.</p>
+    <p>Trail mileage typically refers to maintained singletrack network estimates and may include trails on adjacent lands managed by different jurisdictions (national forest, BLM, county open space). City area data uses approximate municipal boundary measurements &mdash; small incorporated towns with large surrounding trail systems will show inflated trail-density figures. Population size labels (village, town, city) are informal readability designations only.</p>
+    <p>This tool is intended for community reference and trail advocacy purposes. <strong>Verify all figures with local trail organizations and municipal planning departments before citing in formal documents, grant applications, or public presentations.</strong></p>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ── Data ─────────────────────────────────────────────── */
+var SEED = [
+  { city:"East Burke, VT",         population:150,    trails:100, areaSqMi:47.0,  milesAdded5yr:null },
+  { city:"Copper Harbor, MI",       population:100,    trails:40,  areaSqMi:8.2,   milesAdded5yr:null },
+  { city:"Downieville, CA",         population:200,    trails:80,  areaSqMi:1.2,   milesAdded5yr:null },
+  { city:"Crested Butte, CO",       population:1650,   trails:450, areaSqMi:3.2,   milesAdded5yr:null },
+  { city:"Carrabassett Valley, ME", population:750,    trails:80,  areaSqMi:117.0, milesAdded5yr:null },
+  { city:"Oakridge, OR",            population:3200,   trails:350, areaSqMi:2.5,   milesAdded5yr:null },
+  { city:"Crosby, MN",              population:2300,   trails:70,  areaSqMi:1.8,   milesAdded5yr:null },
+  { city:"Moab, UT",                population:5200,   trails:150, areaSqMi:4.3,   milesAdded5yr:null },
+  { city:"Brevard, NC",             population:7700,   trails:300, areaSqMi:7.4,   milesAdded5yr:null },
+  { city:"Park City, UT",           population:8400,   trails:450, areaSqMi:16.8,  milesAdded5yr:null },
+  { city:"Sedona, AZ",              population:9600,   trails:200, areaSqMi:18.6,  milesAdded5yr:null },
+  { city:"Fruita, CO",              population:14100,  trails:130, areaSqMi:3.6,   milesAdded5yr:null },
+  { city:"Anniston, AL",            population:21000,  trails:35,  areaSqMi:45.2,  milesAdded5yr:null },
+  { city:"Marquette, MI",           population:22100,  trails:75,  areaSqMi:23.9,  milesAdded5yr:null },
+  { city:"Squamish, BC",            population:24000,  trails:200, areaSqMi:40.3,  milesAdded5yr:null },
+  { city:"Helena, MT",              population:34000,  trails:85,  areaSqMi:46.0,  milesAdded5yr:null },
+  { city:"Harrisonburg, VA",        population:51000,  trails:110, areaSqMi:17.5,  milesAdded5yr:null },
+  { city:"Bentonville, AR",         population:64800,  trails:300, areaSqMi:49.6,  milesAdded5yr:null },
+  { city:"Ocala, FL",               population:71700,  trails:80,  areaSqMi:44.8,  milesAdded5yr:null },
+  { city:"Castle Rock, CO",         population:84000,  trails:35,  areaSqMi:34.8,  milesAdded5yr:null },
+  { city:"Santa Fe, NM",            population:89000,  trails:115, areaSqMi:37.2,  milesAdded5yr:null },
+  { city:"Duluth, MN",              population:88600,  trails:100, areaSqMi:87.2,  milesAdded5yr:null },
+  { city:"Bellingham, WA",          population:96000,  trails:120, areaSqMi:26.6,  milesAdded5yr:null },
+  { city:"Chattanooga, TN",         population:184000, trails:125, areaSqMi:143.1, milesAdded5yr:null },
+  { city:"Boise, ID",               population:236000, trails:190, areaSqMi:83.9,  milesAdded5yr:null },
+  { city:"Austin, TX",              population:980000, trails:150, areaSqMi:321.8, milesAdded5yr:null }
+];
+
+var DEFAULT_HL = "Castle Rock, CO";
+var DEFAULT_BENCH = "Bentonville, AR";
+var KM = 1.60934;
+
+var TIERS = [
+  { id:"micro", label:"< 5k",       min:0,      max:5000 },
+  { id:"small", label:"5k \u2013 50k",   min:5000,   max:50000 },
+  { id:"mid",   label:"50k \u2013 150k", min:50000,  max:150000 },
+  { id:"large", label:"150k+",      min:150000, max:Infinity }
+];
+
+var UL = {
+  imperial:{ trail:"mi",       per10k:"mi / 10k pop",       perCap:"pop / mi" },
+  metric:  { trail:"km",       per10k:"km / 10k pop",       perCap:"pop / km" },
+  both:    { trail:"mi\u00b7km", per10k:"mi\u00b7km / 10k pop", perCap:"pop / mi\u00b7km" }
+};
+
+/* ── State ────────────────────────────────────────────── */
+var S = {
+  locs: [], highlight: DEFAULT_HL, bench: DEFAULT_BENCH,
+  units: "imperial", theme: "dark", metric: "milesper10k",
+  activeTiers: [], panelTab: null, gMet: "milesper10k",
+  tSort: { key:"milesper10k", dir:"desc" },
+  open: { tier:true, chart:true, gap:true, tbl:true },
+  confirmRst: false, confirmTimer: null
+};
+
+/* ── Helpers ──────────────────────────────────────────── */
+function $(id){ return document.getElementById(id); }
+function enrich(d){
+  return {
+    city:d.city, population:d.population, trails:d.trails,
+    areaSqMi:d.areaSqMi, milesAdded5yr:d.milesAdded5yr,
+    milesper10k:+((d.trails/(d.population/10000)).toFixed(1)),
+    popPerMile:+((d.population/d.trails).toFixed(1)),
+    trailsPerSqMi:d.areaSqMi?+((d.trails/d.areaSqMi).toFixed(2)):null,
+    growthPct:(d.milesAdded5yr!=null&&d.trails)?+((d.milesAdded5yr/d.trails*100).toFixed(1)):null
+  };
 }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fmtN(v){ return (typeof v==="number")?v.toLocaleString(undefined,{maximumFractionDigits:1}):"\u2014"; }
+function fmtShort(v){ return v>=1000?(v/1000).toFixed(1)+"k":String(v); }
+function fmtMoney(v){ return v>=1e6?"$"+(v/1e6).toFixed(1)+"M":"$"+(v/1e3).toFixed(0)+"k"; }
+function cv10k(v){ return S.units==="metric"?v*KM:v; }
+function cvCap(v){ return S.units==="metric"?v/KM:v; }
+function cvTr(v){ return S.units==="metric"?v*KM:v; }
+function firstName(c){ return c.split(",")[0]; }
+function tierOf(p){ for(var i=0;i<TIERS.length;i++){ if(p>=TIERS[i].min&&p<TIERS[i].max) return TIERS[i]; } return null; }
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
-// ── Main Dashboard ────────────────────────────────────────────────
-function Dashboard() {
-  const [locs,        setLocs]        = useState(() => SEED.map(enrich));
-  const [highlight,   setHighlight]   = useState(DEFAULT_HIGHLIGHT);
-  const [panelTab,    setPanelTab]    = useState(null);  // null | 'add' | 'highlight'
-  const [activeTiers, setActiveTiers] = useState([]);
-  const [metric,      setMetric]      = useState("milesper10k");
-  const [units,       setUnits]       = useState("imperial");
-  const [theme,       setTheme]       = useState("dark");
-  const [form,        setForm]        = useState({ city: "", population: "", trails: "", areaSqMi: "", milesAdded5yr: "" });
-  const [errs,        setErrs]        = useState({});
-  const [tSort,       setTSort]       = useState({ key: "milesper10k", dir: "desc" });
-  const [bench,       setBench]       = useState(DEFAULT_BENCH);
-  const [gMet,        setGMet]        = useState("milesper10k");
-  const [cLow,        setCLow]        = useState(50000);
-  const [cHigh,       setCHigh]       = useState(150000);
-  const [confirmRst,  setConfirmRst]  = useState(false);
-  const [tierOpen,    setTierOpen]    = useState(true);
-  const [chartOpen,   setChartOpen]   = useState(true);
-  const [gapOpen,     setGapOpen]     = useState(true);
-  const [tableOpen,   setTableOpen]   = useState(true);
-
-  const T = THEMES[theme];
-  const L = UL[units];
-
-  const MODES = {
-    milesper10k: { label: L.per10k,  dir: "desc", btnColor: T.blue,   barColor: T.blue,   hint: "Higher = more trail per capita. Best performers at top." },
-    popPerMile:  { label: L.perCap,  dir: "asc",  btnColor: T.indigo, barColor: T.indigo, hint: "Lower = less crowded trails. Best performers at top." },
-    scatter:     { label: "Scatter", dir: null,   btnColor: T.violet, barColor: null,     hint: "Population vs trail miles (log scale). Hover any dot for details." },
-  };
-  const mInfo = MODES[metric];
-
-  // ── Handlers ────────────────────────────────────────────────────
-  const openTab = (tab) => setPanelTab(p => p === tab ? null : tab);
-
-  const safeSetHighlight = (city) => {
-    setHighlight(city);
-    setBench(prev => prev === city
-      ? (locs.find(l => l.city !== city)?.city ?? DEFAULT_BENCH)
-      : prev
-    );
-  };
-
-  const handleReset = () => {
-    const seedLocs   = SEED.map(enrich);
-    setLocs(seedLocs);
-    const newHL = seedLocs.find(l => l.city === highlight) ? highlight : DEFAULT_HIGHLIGHT;
-    setHighlight(newHL);
-    setBench(prev =>
-      seedLocs.find(l => l.city === prev && l.city !== newHL) ? prev : DEFAULT_BENCH
-    );
-    setConfirmRst(false);
-  };
-
-  const clickReset = () => {
-    if (locs.length <= SEED.length) return;
-    if (!confirmRst) {
-      setConfirmRst(true);
-      setTimeout(() => setConfirmRst(false), 3000);
-    } else {
-      handleReset();
-    }
-  };
-
-  const toggleTier = (id) =>
-    setActiveTiers(p => p.includes(id) ? p.filter(t => t !== id) : [...p, id]);
-
-  const submit = () => {
-    const e = {};
-    if (!form.city.trim())                         e.city       = "Required";
-    if (!form.population || +form.population <= 0) e.population = "Must be > 0";
-    if (!form.trails     || +form.trails     <= 0) e.trails     = "Must be > 0";
-    if (form.areaSqMi    && +form.areaSqMi   <= 0) e.areaSqMi   = "Must be > 0";
-    if (Object.keys(e).length) { setErrs(e); return; }
-    setLocs(p => [...p, enrich({
-      city:          form.city.trim(),
-      population:    +form.population,
-      trails:        +form.trails,
-      areaSqMi:      form.areaSqMi      ? +form.areaSqMi      : null,
-      milesAdded5yr: form.milesAdded5yr ? +form.milesAdded5yr : null,
-    })]);
-    setForm({ city: "", population: "", trails: "", areaSqMi: "", milesAdded5yr: "" });
-    setErrs({});
-  };
-
-  const tSortBy = k => setTSort(p => ({ key: k, dir: p.key === k && p.dir === "desc" ? "asc" : "desc" }));
-  const fld = (f, v) => { setForm(p => ({ ...p, [f]: v })); setErrs(p => ({ ...p, [f]: null })); };
-
-  // ── Derived data ────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (activeTiers.length === 0) return locs;
-    return locs.filter(l =>
-      activeTiers.some(id => {
-        const t = TIERS.find(t => t.id === id);
-        return t && l.population >= t.min && l.population < t.max;
-      })
-    );
-  }, [locs, activeTiers]);
-
-  const barData = useMemo(() => {
-    if (metric === "scatter") return [];
-    const dir  = metric === "milesper10k" ? "desc" : "asc";
-    const conv = metric === "milesper10k" ? v => cvPer10k(v, units) : v => cvPerCap(v, units);
-    return [...filtered]
-      .sort((a, b) => dir === "desc" ? b[metric] - a[metric] : a[metric] - b[metric])
-      .map(d => ({ ...d, _dv: +(conv(d[metric]).toFixed(1)) }));
-  }, [filtered, metric, units]);
-
-  const { slope, intercept } = useMemo(() => {
-    const pts = filtered.filter(d => d.population > 0 && d.trails > 0);
-    if (pts.length < 3) return { slope: 0, intercept: 0 };
-    const n    = pts.length;
-    const xs   = pts.map(d => Math.log10(d.population));
-    const ys   = pts.map(d => d.trails);
-    const xm   = xs.reduce((a, b) => a + b, 0) / n;
-    const ym   = ys.reduce((a, b) => a + b, 0) / n;
-    const ssxy = xs.reduce((s, x, i) => s + (x - xm) * (ys[i] - ym), 0);
-    const ssxx = xs.reduce((s, x) => s + (x - xm) ** 2, 0);
-    const sl   = ssxx === 0 ? 0 : ssxy / ssxx;
-    return { slope: sl, intercept: ym - sl * xm };
-  }, [filtered]);
-
-  const trendPts = useMemo(() => {
-    if (filtered.length < 3) return [];
-    const pops   = filtered.map(d => d.population);
-    const logMin = Math.log10(Math.min(...pops));
-    const logMax = Math.log10(Math.max(...pops));
-    return Array.from({ length: 60 }, (_, i) => {
-      const t    = i / 59;
-      const logX = logMin + (logMax - logMin) * t;
-      return { population: Math.pow(10, logX), trails: Math.max(0, slope * logX + intercept) };
+function filtered(){
+  if(!S.activeTiers.length) return S.locs.slice();
+  return S.locs.filter(function(l){
+    return S.activeTiers.some(function(id){
+      var t=null; for(var i=0;i<TIERS.length;i++){ if(TIERS[i].id===id){t=TIERS[i];break;} }
+      return t && l.population>=t.min && l.population<t.max;
     });
-  }, [filtered, slope, intercept]);
+  });
+}
 
-  const [xDom, yDom] = useMemo(() => {
-    if (!filtered.length) return [[70, 1500000], [0, 500]];
-    const pops   = filtered.map(d => d.population);
-    const trails = filtered.map(d => d.trails);
-    return [
-      [Math.pow(10, Math.log10(Math.min(...pops)) - 0.2), Math.pow(10, Math.log10(Math.max(...pops)) + 0.2)],
-      [0, Math.max(...trails) * 1.15],
-    ];
-  }, [filtered]);
+/* ── Renders ──────────────────────────────────────────── */
+function renderHeader(){
+  $("cityCount").textContent = S.locs.length;
+  var segBtns = $("unitSeg").querySelectorAll("button");
+  segBtns.forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-u")===S.units); });
+  $("themeBtn").innerHTML = S.theme==="dark" ? "&#9728; Light" : "&#127769; Dark";
+}
 
-  const tableData = useMemo(() => {
-    const { key, dir } = tSort;
-    const m = dir === "asc" ? 1 : -1;
-    return [...locs].sort((a, b) =>
-      typeof a[key] === "string"
-        ? m * a[key].localeCompare(b[key])
-        : m * ((a[key] ?? -Infinity) - (b[key] ?? -Infinity))
-    );
-  }, [locs, tSort]);
+function renderTabs(){
+  var addOn = S.panelTab==="add", hlOn = S.panelTab==="highlight";
+  $("tabAdd").className = "tab-btn"+(addOn?" on-add":"");
+  $("tabHl").className  = "tab-btn"+(hlOn?" on-hl":"");
+  $("tabAddArrow").innerHTML = addOn?"&#9650;":"&#9660;";
+  $("tabHlArrow").innerHTML  = hlOn?"&#9650;":"&#9660;";
+  $("tabBar").className = "tab-bar"+(S.panelTab?" open":"");
+  $("addBody").style.display = addOn?"block":"none";
+  $("hlBody").style.display  = hlOn?"block":"none";
 
-  const gap = useMemo(() => {
-    const home  = locs.find(l => l.city === highlight);
-    const bCity = locs.find(l => l.city === bench);
-    if (!home || !bCity || home.city === bCity.city) return null;
-    const targetMi = gMet === "milesper10k"
-      ? bCity.milesper10k * (home.population / 10000)
-      : home.population / bCity.popPerMile;
-    const gapMi  = Math.max(0, Math.ceil(targetMi - home.trails));
-    const homeVal = gMet === "milesper10k" ? home.milesper10k  : home.popPerMile;
-    const bVal    = gMet === "milesper10k" ? bCity.milesper10k : bCity.popPerMile;
-    return { homeVal, bVal, gapMi, costLo: gapMi * cLow, costHi: gapMi * cHigh, ahead: targetMi <= home.trails };
-  }, [locs, highlight, bench, gMet, cLow, cHigh]);
+  var custom = S.locs.length - SEED.length;
+  var rb = $("resetBtn");
+  if(S.confirmRst){ rb.className="reset-btn confirm"; rb.innerHTML="&#9888; Confirm reset?"; }
+  else if(custom>0){ rb.className="reset-btn active"; rb.innerHTML="&#8634; Reset ("+custom+" added)"; }
+  else{ rb.className="reset-btn"; rb.innerHTML="&#8634; Reset"; }
+}
 
-  const gapDist = (mi) => {
-    if (units === "imperial") return `+${mi.toLocaleString()} mi`;
-    if (units === "metric")   return `+${Math.ceil(mi * MI_TO_KM).toLocaleString()} km`;
-    return `+${mi.toLocaleString()} mi / ${Math.ceil(mi * MI_TO_KM).toLocaleString()} km`;
+function renderHlPanel(){
+  var sel = $("hlSelect");
+  var sorted = S.locs.slice().sort(function(a,b){ return a.city.localeCompare(b.city); });
+  sel.innerHTML = sorted.map(function(l){
+    return '<option value="'+esc(l.city)+'"'+(l.city===S.highlight?" selected":"")+'>'+esc(l.city)+'</option>';
+  }).join("");
+  $("hlResetWrap").innerHTML = (S.highlight!==DEFAULT_HL)
+    ? '<button class="hl-reset" id="hlResetBtn">&larr; Reset to Castle Rock</button>' : "";
+  var btn = $("hlResetBtn");
+  if(btn) btn.onclick = function(){ setHighlight(DEFAULT_HL); };
+
+  var d = S.locs.find(function(l){ return l.city===S.highlight; });
+  if(!d){ $("hlCard").innerHTML=""; return; }
+  var t = tierOf(d.population);
+  var L = UL[S.units];
+  $("hlCard").innerHTML =
+    '<div class="hl-card"><div class="top"><span class="name">&#128205; '+esc(d.city)+'</span>'+
+    (t?'<span class="tier">'+t.label+'</span>':"")+'</div>'+
+    '<div class="hl-stats">'+
+    '<div><div class="k">Population</div><div class="v">'+d.population.toLocaleString()+'</div></div>'+
+    '<div><div class="k">Trail '+L.trail+'</div><div class="v">'+fmtN(cvTr(d.trails))+'</div></div>'+
+    '<div><div class="k">'+L.per10k+'</div><div class="v" style="color:var(--blue)">'+fmtN(cv10k(d.milesper10k))+'</div></div>'+
+    '<div><div class="k">'+L.perCap+'</div><div class="v" style="color:var(--indigo)">'+fmtN(cvCap(d.popPerMile))+'</div></div>'+
+    '</div></div>';
+}
+
+function renderTiers(){
+  $("tierHdr").className = "sec-hdr"+(S.open.tier?" open":"");
+  $("tierArrow").innerHTML = S.open.tier?"&#9650;":"&#9660;";
+  $("tierBody").style.display = S.open.tier?"block":"none";
+  $("tierBadge").innerHTML = S.activeTiers.length
+    ? '<span class="badge" style="background:rgba(72,149,239,.18);color:var(--blue)">'+S.activeTiers.length+' active &middot; '+filtered().length+' cities</span>' : "";
+
+  var html = '<button class="pill'+(S.activeTiers.length===0?" on-sub":"")+'" data-tier="__all">All <span class="cnt">('+S.locs.length+')</span></button>';
+  TIERS.forEach(function(t){
+    var cnt = S.locs.filter(function(l){ return l.population>=t.min&&l.population<t.max; }).length;
+    var on = S.activeTiers.indexOf(t.id)>=0;
+    html += '<button class="pill'+(on?" on-blue":"")+'" data-tier="'+t.id+'">'+t.label+' <span class="cnt">('+cnt+')</span></button>';
+  });
+  $("tierPills").innerHTML = html;
+  $("tierPills").querySelectorAll("button").forEach(function(b){
+    b.onclick = function(){
+      var id = b.getAttribute("data-tier");
+      if(id==="__all"){ S.activeTiers=[]; }
+      else{
+        var i = S.activeTiers.indexOf(id);
+        if(i>=0) S.activeTiers.splice(i,1); else S.activeTiers.push(id);
+      }
+      renderTiers(); renderChart();
+    };
+  });
+  $("tierSummary").innerHTML = S.activeTiers.length
+    ? 'Showing '+filtered().length+' of '+S.locs.length+' cities'+(S.activeTiers.length>1?' <span style="color:var(--blue)">&middot; '+S.activeTiers.length+' tiers selected</span>':"") : "";
+}
+
+function modeInfo(){
+  var L = UL[S.units];
+  return {
+    milesper10k:{ label:L.per10k, cls:"on-blue",   colorVar:"--blue",   hint:"Higher = more trail per capita. Best performers at top." },
+    popPerMile:{  label:L.perCap, cls:"on-indigo", colorVar:"--indigo", hint:"Lower = less crowded trails. Best performers at top." },
+    scatter:{     label:"Scatter",cls:"on-violet", colorVar:"--violet", hint:"Population vs trail miles (log scale). Tap any dot for details." }
   };
+}
 
-  // ── Table cell unit display ──────────────────────────────────────
-  const cellTrail = (mi) =>
-    units === "both" ? `${mi} · ${(mi * MI_TO_KM).toFixed(1)}` :
-    units === "metric" ? (mi * MI_TO_KM).toFixed(1) : `${mi}`;
-  const cellPer10k = (v) =>
-    units === "both" ? `${fmtN(v)} · ${fmtN(v * MI_TO_KM)}` : fmtN(cvPer10k(v, units));
-  const cellPerCap = (v) =>
-    units === "both" ? `${fmtN(v)} · ${fmtN(v / MI_TO_KM)}` : fmtN(cvPerCap(v, units));
+function renderChart(){
+  $("chartHdr").className = "sec-hdr"+(S.open.chart?" open":"");
+  $("chartArrow").innerHTML = S.open.chart?"&#9650;":"&#9660;";
+  $("chartBody").style.display = S.open.chart?"block":"none";
 
-  // ── Shared styles ───────────────────────────────────────────────
-  const card   = { background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 12 };
-  const inp    = { width: "100%", boxSizing: "border-box", background: T.inputBg, border: `1px solid ${T.inputBdr}`, borderRadius: 7, padding: "8px 10px", color: T.text, fontSize: 12, outline: "none" };
-  const lbl    = { display: "block", fontSize: 10, fontWeight: 700, color: T.textSub, textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 };
-  const secHdr = { fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 12 };
+  var MI = modeInfo(), m = MI[S.metric];
+  $("chartBadge").style.cssText = "background:color-mix(in srgb, var("+m.colorVar+") 18%, transparent);color:var("+m.colorVar+")";
+  $("chartBadge").textContent = m.label;
+  if(!S.open.chart) return;
 
-  const customCount = locs.length - SEED.length;
-  const BAND = 33;
-  const barH = barData.length * BAND + 12;
-
-  const TABLE_COLS = [
-    { key: "city",          label: "City",            align: "left"  },
-    { key: "population",    label: "Population",      align: "right" },
-    { key: "trails",        label: `Trail ${L.trail}`,align: "right" },
-    { key: "milesper10k",   label: L.per10k,          align: "right" },
-    { key: "popPerMile",    label: L.perCap,          align: "right" },
-    { key: "trailsPerSqMi", label: "Trail / sq mi",   align: "right" },
-    { key: "milesAdded5yr", label: "5yr Growth",      align: "right" },
-  ];
-
-  const highlightData = locs.find(l => l.city === highlight);
-  const highlightTier = highlightData && TIERS.find(t => highlightData.population >= t.min && highlightData.population < t.max);
-
-  // ── Tab button style helper ──────────────────────────────────────
-  const tabBtn = (tab, color) => ({
-    background: "transparent",
-    color: panelTab === tab ? color : T.textSub,
-    border: "none",
-    borderBottom: panelTab === tab ? `2.5px solid ${color}` : "2.5px solid transparent",
-    padding: "11px 18px",
-    fontSize: 12, fontWeight: 700, cursor: "pointer",
-    transition: "all .15s", whiteSpace: "nowrap",
+  var pills = "";
+  ["milesper10k","popPerMile","scatter"].forEach(function(k){
+    pills += '<button class="pill'+(S.metric===k?" "+MI[k].cls:"")+'" data-m="'+k+'">'+esc(MI[k].label)+'</button>';
+  });
+  $("modePills").innerHTML = pills;
+  $("modePills").querySelectorAll("button").forEach(function(b){
+    b.onclick = function(){ S.metric = b.getAttribute("data-m"); renderChart(); };
   });
 
-  return (
-    <div style={{ minHeight: "100vh", background: T.pageBg, color: T.text, fontFamily: "system-ui,-apple-system,sans-serif", padding: "18px 16px 48px" }}>
+  $("chartHint").innerHTML = m.hint + (S.metric!=="scatter"
+    ? '<span class="hl-note">Orange bar = '+esc(firstName(S.highlight))+'</span>' : "");
 
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <header style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 12, marginBottom: 18 }}>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <h1 style={{ margin: 0, fontSize: 23, fontWeight: 800, color: T.text, letterSpacing: "-.5px" }}>Singletrack Density</h1>
-          <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textDim }}>
-            Trail access per capita · {locs.length} North American MTB destinations
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          {/* Unit toggle */}
-          <div style={{ display: "flex", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 22, padding: 3, gap: 2 }}>
-            {["imperial", "metric", "both"].map(u => (
-              <button key={u} onClick={() => setUnits(u)} style={{
-                background: units === u ? T.blue : "transparent",
-                color: units === u ? "#fff" : T.textSub,
-                border: "none", borderRadius: 18, padding: "6px 11px",
-                fontSize: 12, fontWeight: 700, cursor: "pointer", minHeight: 36,
-                whiteSpace: "nowrap",
-              }}>
-                {u === "imperial" ? "Imperial" : u === "metric" ? "Metric" : "Both"}
-              </button>
-            ))}
-          </div>
-          {/* Theme toggle */}
-          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} style={{
-            background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 22,
-            padding: "7px 14px", color: T.textSub, fontSize: 12, fontWeight: 700,
-            cursor: "pointer", minHeight: 36, whiteSpace: "nowrap",
-          }}>
-            {theme === "dark" ? "☀ Light" : "🌙 Dark"}
-          </button>
-        </div>
-      </header>
-
-      {/* ── Add Location / Highlight Panel (collapsed by default) ─ */}
-      <section style={{ ...card, marginBottom: 13, overflow: "hidden" }}>
-        {/* Tab bar */}
-        <div style={{ display: "flex", alignItems: "stretch", borderBottom: panelTab ? `1px solid ${T.border}` : "none" }}>
-          <button onClick={() => openTab("add")} style={tabBtn("add", T.blue)}>
-            + Add Location {panelTab === "add" ? "▲" : "▼"}
-          </button>
-          <button onClick={() => openTab("highlight")} style={tabBtn("highlight", T.orange)}>
-            📍 Highlight {panelTab === "highlight" ? "▲" : "▼"}
-          </button>
-          {/* Reset — right-aligned */}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 14 }}>
-            <button onClick={clickReset} style={{
-              background: confirmRst ? `${T.orange}18` : "transparent",
-              color: confirmRst ? T.orange : customCount > 0 ? T.textSub : T.poor,
-              border: `1px solid ${confirmRst ? T.orange : customCount > 0 ? T.border : "transparent"}`,
-              borderRadius: 7, padding: "5px 11px", fontSize: 11, fontWeight: 700,
-              cursor: customCount > 0 ? "pointer" : "default", transition: "all .15s",
-            }}>
-              {confirmRst
-                ? "⚠ Confirm reset?"
-                : customCount > 0
-                  ? `↺ Reset (${customCount} added)`
-                  : "↺ Reset"}
-            </button>
-          </div>
-        </div>
-
-        {/* Add Location content */}
-        {panelTab === "add" && (
-          <div style={{ padding: "16px 18px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 9 }}>
-              {[
-                { f: "city",          label: "City Name",         ph: "Trail Town", t: "text",   req: true  },
-                { f: "population",    label: "Population",        ph: "12000",       t: "number", req: true  },
-                { f: "trails",        label: "Trail mi",          ph: "160",         t: "number", req: true  },
-                { f: "areaSqMi",      label: "City Area (sq mi)", ph: "40",          t: "number", req: false },
-                { f: "milesAdded5yr", label: "5yr Growth (mi)",   ph: "25",          t: "number", req: false },
-              ].map(({ f, label, ph, t, req }) => (
-                <div key={f}>
-                  <label style={lbl}>
-                    {label}{!req && <span style={{ color: T.textDim, fontWeight: 400, marginLeft: 4 }}>opt</span>}
-                  </label>
-                  <input type={t} value={form[f]} placeholder={ph}
-                    min={t === "number" ? 0 : undefined}
-                    onChange={e => fld(f, e.target.value)}
-                    style={{ ...inp, borderColor: errs[f] ? T.error : T.inputBdr }}
-                  />
-                  {errs[f] && <div style={{ fontSize: 10, color: T.error, marginTop: 2 }}>{errs[f]}</div>}
-                </div>
-              ))}
-            </div>
-            <button onClick={submit} style={{
-              marginTop: 12, background: T.blue, border: "none", borderRadius: 7,
-              padding: "8px 20px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
-            }}
-              onMouseEnter={e => e.currentTarget.style.opacity = ".82"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-            >Add Location</button>
-          </div>
-        )}
-
-        {/* Highlight City content */}
-        {panelTab === "highlight" && (
-          <div style={{ padding: "16px 18px" }}>
-            <div style={{ fontSize: 11, color: T.textSub, marginBottom: 14, fontWeight: 600 }}>
-              The highlighted city appears in orange throughout all charts and tables,
-              and serves as the baseline in the Trail Gap Calculator.
-              Castle Rock, CO is the default.
-            </div>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <label style={lbl}>Highlighted City</label>
-                <select value={highlight}
-                  onChange={e => safeSetHighlight(e.target.value)}
-                  style={{ ...inp, cursor: "pointer" }}>
-                  {[...locs].sort((a, b) => a.city.localeCompare(b.city)).map(l => (
-                    <option key={l.city} value={l.city}>{l.city}</option>
-                  ))}
-                </select>
-                {highlight !== DEFAULT_HIGHLIGHT && (
-                  <button onClick={() => safeSetHighlight(DEFAULT_HIGHLIGHT)} style={{
-                    marginTop: 7, background: "transparent", border: `1px solid ${T.border}`,
-                    borderRadius: 6, padding: "4px 10px", color: T.textDim, fontSize: 11,
-                    cursor: "pointer", fontWeight: 600,
-                  }}>
-                    ← Reset to Castle Rock
-                  </button>
-                )}
-              </div>
-              {/* Stats card for highlighted city */}
-              {highlightData && (
-                <div style={{ background: `${T.orange}12`, border: `1px solid ${T.orange}35`, borderRadius: 10, padding: "13px 16px", minWidth: 230 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, color: T.orange, fontSize: 13 }}>📍 {highlightData.city}</div>
-                    {highlightTier && (
-                      <div style={{ fontSize: 10, background: `${T.orange}25`, color: T.orange, padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
-                        {highlightTier.label}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", fontSize: 11 }}>
-                    {[
-                      { label: "Population", val: highlightData.population.toLocaleString(), color: T.text },
-                      { label: `Trail ${L.trail}`, val: `${fmtN(cvTrail(highlightData.trails, units))}`, color: T.text },
-                      { label: L.per10k, val: fmtN(cvPer10k(highlightData.milesper10k, units)), color: T.blue },
-                      { label: L.perCap, val: fmtN(cvPerCap(highlightData.popPerMile, units)), color: T.indigo },
-                    ].map(({ label, val, color }) => (
-                      <div key={label}>
-                        <div style={{ color: T.textDim, marginBottom: 1 }}>{label}</div>
-                        <strong style={{ color, fontFamily: "monospace" }}>{val}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ── Population Tier Filter (collapsible) ────────────────── */}
-      <section style={{ ...card, marginBottom: 13, overflow: "hidden" }}>
-        {/* Collapsible header */}
-        <button
-          onClick={() => setTierOpen(p => !p)}
-          style={{
-            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "13px 18px", background: "transparent", border: "none", cursor: "pointer",
-            borderBottom: tierOpen ? `1px solid ${T.border}` : "none",
-            minHeight: 44,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: T.textSub, letterSpacing: 1.2, textTransform: "uppercase" }}>
-              Population Tier Filter
-            </span>
-            {activeTiers.length > 0 && (
-              <span style={{ fontSize: 10, background: `${T.blue}20`, color: T.blue, padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
-                {activeTiers.length} active · {filtered.length} cities
-              </span>
-            )}
-          </div>
-          <span style={{ color: T.textDim, fontSize: 12, marginLeft: 8, flexShrink: 0 }}>
-            {tierOpen ? "▲" : "▼"}
-          </span>
-        </button>
-
-        {/* Collapsible body */}
-        {tierOpen && (
-          <div style={{ padding: "12px 18px 16px" }}>
-            <div style={{ fontSize: 11, color: T.textDim, marginBottom: 11 }}>
-              Select one or more population ranges to scope the charts. The data table always shows all cities.
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {/* All / reset */}
-              <button onClick={() => setActiveTiers([])} style={{
-                background: activeTiers.length === 0 ? T.textSub : "transparent",
-                color: activeTiers.length === 0 ? "#fff" : T.textDim,
-                border: `1.5px solid ${activeTiers.length === 0 ? T.textSub : T.border}`,
-                borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 600,
-                cursor: "pointer", minHeight: 40, lineHeight: 1,
-              }}>
-                All <span style={{ opacity: .65, fontSize: 11 }}>({locs.length})</span>
-              </button>
-              {TIERS.map(t => {
-                const cnt = locs.filter(l => l.population >= t.min && l.population < t.max).length;
-                const on  = activeTiers.includes(t.id);
-                return (
-                  <button key={t.id} onClick={() => toggleTier(t.id)} style={{
-                    background: on ? T.blue : "transparent",
-                    color: on ? "#fff" : T.textSub,
-                    border: `1.5px solid ${on ? T.blue : T.border}`,
-                    borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 600,
-                    cursor: "pointer", minHeight: 40, lineHeight: 1, transition: "all .15s",
-                  }}>
-                    {t.label} <span style={{ opacity: .65, fontSize: 11 }}>({cnt})</span>
-                  </button>
-                );
-              })}
-            </div>
-            {activeTiers.length > 1 && (
-              <div style={{ fontSize: 11, color: T.textDim, marginTop: 10 }}>
-                Showing {filtered.length} of {locs.length} cities
-                <span style={{ color: T.blue, marginLeft: 6 }}>· {activeTiers.length} tiers selected</span>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* ── Charts ──────────────────────────────────────────────── */}
-      <section style={{ ...card, marginBottom: 13, overflow: "hidden" }}>
-        <button onClick={() => setChartOpen(p => !p)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", background: "transparent", border: "none", cursor: "pointer", borderBottom: chartOpen ? `1px solid ${T.border}` : "none", minHeight: 44 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: T.textSub, letterSpacing: 1.2, textTransform: "uppercase" }}>Charts</span>
-            <span style={{ fontSize: 10, background: `${mInfo.btnColor}22`, color: mInfo.btnColor, padding: "2px 9px", borderRadius: 10, fontWeight: 700 }}>{mInfo.label}</span>
-          </div>
-          <span style={{ color: T.textDim, fontSize: 12, marginLeft: 8, flexShrink: 0 }}>{chartOpen ? "▲" : "▼"}</span>
-        </button>
-        {chartOpen && (<div style={{ padding: "16px 18px" }}>
-        <div style={{ display: "flex", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
-          {Object.entries(MODES).map(([key, m]) => {
-            const on = metric === key;
-            return (
-              <button key={key} onClick={() => setMetric(key)} style={{
-                background: on ? m.btnColor : "transparent",
-                color: on ? "#fff" : T.textSub,
-                border: `1.5px solid ${on ? m.btnColor : T.border}`,
-                borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700,
-                cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap", minHeight: 40,
-              }}>{m.label}</button>
-            );
-          })}
-        </div>
-        {/* Hint text — bold for dark-mode legibility */}
-        <div style={{ fontSize: 11, fontWeight: 600, color: T.textSub, marginBottom: 12 }}>
-          {mInfo.hint}
-          {metric !== "scatter" && (
-            <span style={{ color: T.orange, marginLeft: 6, fontWeight: 700 }}>
-              Orange bar = {highlight.split(",")[0]}
-            </span>
-          )}
-        </div>
-
-        {/* Bar chart */}
-        {metric !== "scatter" && (barData.length === 0 ? (
-          <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: T.textDim, fontSize: 13 }}>
-            No cities in this tier selection.
-          </div>
-        ) : (
-          <>
-            <div style={{ overflowY: "auto", maxHeight: 500, borderRadius: 4 }}>
-              <div style={{ height: barH }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart layout="vertical" data={barData} margin={{ top: 2, right: 64, left: 6, bottom: 2 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={T.grid} />
-                    <XAxis type="number" tick={{ fill: T.textDim, fontSize: 10 }} axisLine={{ stroke: T.grid }} tickLine={false} tickFormatter={fmtShort} />
-                    <YAxis type="category" dataKey="city" width={148} axisLine={false} tickLine={false}
-                      tick={(props) => {
-                        const { x, y, payload } = props;
-                        const home = payload.value === highlight;
-                        return (
-                          <g transform={`translate(${x},${y})`}>
-                            <text x={0} y={0} dy={4} textAnchor="end"
-                              fill={home ? T.orange : T.textSub}
-                              fontSize={home ? 12 : 11}
-                              fontWeight={home ? "bold" : "normal"}
-                            >{payload.value}</text>
-                          </g>
-                        );
-                      }}
-                    />
-                    <Tooltip content={<BarTip T={T} units={units} highlight={highlight} />} cursor={{ fill: "rgba(128,128,128,.06)" }} />
-                    <Bar dataKey="_dv" radius={[0, 4, 4, 0]} maxBarSize={24}>
-                      {barData.map((e, i) => (
-                        <Cell key={i} fill={e.city === highlight ? T.orange : mInfo.barColor} fillOpacity={e.city === highlight ? 1 : .8} />
-                      ))}
-                      <LabelList dataKey="_dv" position="right" formatter={fmtShort} style={{ fill: T.textDim, fontSize: 10 }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div style={{ marginTop: 8, display: "flex", gap: 14, fontSize: 11, color: T.textDim }}>
-              <span><span style={{ color: mInfo.barColor }}>■</span> All cities</span>
-              <span><span style={{ color: T.orange }}>■</span> {highlight.split(",")[0]}</span>
-              <span style={{ marginLeft: "auto" }}>Showing {filtered.length} of {locs.length} cities</span>
-            </div>
-          </>
-        ))}
-
-        {/* Scatter plot */}
-        {metric === "scatter" && (filtered.length < 3 ? (
-          <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: T.textDim, fontSize: 13 }}>
-            Select a tier with at least 3 cities to show the scatter plot.
-          </div>
-        ) : (
-          <>
-            <div style={{ height: 420 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 10, right: 24, left: 8, bottom: 34 }}>
-                  <CartesianGrid stroke={T.grid} strokeDasharray="3 3" />
-                  <XAxis type="number" dataKey="population" scale="log"
-                    domain={xDom} ticks={[100, 1000, 10000, 100000, 1000000]}
-                    tickFormatter={v => v >= 1e6 ? (v / 1e6).toFixed(0) + "M" : v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}
-                    tick={{ fill: T.textDim, fontSize: 10 }} axisLine={{ stroke: T.grid }} tickLine={false}
-                    label={{ value: "Population (log scale)", position: "insideBottom", offset: -18, fill: T.textDim, fontSize: 10 }}
-                  />
-                  <YAxis type="number" dataKey="trails" domain={yDom}
-                    tick={{ fill: T.textDim, fontSize: 10 }} axisLine={{ stroke: T.grid }} tickLine={false}
-                    label={{ value: "Trail Miles", angle: -90, position: "insideLeft", offset: 12, fill: T.textDim, fontSize: 10 }}
-                  />
-                  <Tooltip content={<ScatterTip T={T} units={units} highlight={highlight} />} cursor={{ fill: "rgba(0,0,0,0)" }} />
-                  <Scatter data={trendPts}
-                    line={{ stroke: T.blue, strokeWidth: 1.5, strokeDasharray: "6 3" }}
-                    shape={() => null} isAnimationActive={false}
-                  />
-                  <Scatter data={filtered}
-                    shape={(props) => {
-                      const { cx, cy, payload } = props;
-                      if (!payload?.city) return null;
-                      const home = payload.city === highlight;
-                      return (
-                        <g>
-                          <circle cx={cx} cy={cy} r={home ? 7 : 5}
-                            fill={home ? T.orange : T.blue} fillOpacity={home ? 1 : .65}
-                            stroke={home ? "rgba(255,255,255,.3)" : "none"} strokeWidth={home ? 1.5 : 0}
-                          />
-                          {home && <text x={cx + 10} y={cy + 4} fontSize={10} fill={T.orange} fontWeight="bold">{payload.city.split(",")[0]}</text>}
-                        </g>
-                      );
-                    }}
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={{ marginTop: 8, display: "flex", gap: 14, fontSize: 11, color: T.textDim }}>
-              <span><span style={{ color: T.blue }}>●</span> All cities</span>
-              <span><span style={{ color: T.orange }}>●</span> {highlight.split(",")[0]}</span>
-              <span>╌╌ Log-linear trend</span>
-              <span style={{ marginLeft: "auto" }}>Showing {filtered.length} of {locs.length} cities</span>
-            </div>
-          </>
-        ))}
-        </div>)}
-      </section>
-
-      {/* ── Trail Gap Calculator ─────────────────────────────────── */}
-      <section style={{ ...card, marginBottom: 13, overflow: "hidden" }}>
-        <button onClick={() => setGapOpen(p => !p)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", background: "transparent", border: "none", cursor: "pointer", borderBottom: gapOpen ? `1px solid ${T.border}` : "none", minHeight: 44 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: T.orange, letterSpacing: 1.2, textTransform: "uppercase" }}>📍 Trail Gap Calculator</span>
-            <span style={{ fontSize: 11, color: T.textSub, fontWeight: 400 }}>— {highlight}</span>
-          </div>
-          <span style={{ color: T.textDim, fontSize: 12, marginLeft: 8, flexShrink: 0 }}>{gapOpen ? "▲" : "▼"}</span>
-        </button>
-        {gapOpen && (<div style={{ padding: "16px 18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 9, marginBottom: 14 }}>
-          <div>
-            <label style={lbl}>Benchmark City</label>
-            <select value={bench} onChange={e => setBench(e.target.value)} style={{ ...inp, cursor: "pointer" }}>
-              {[...locs].filter(l => l.city !== highlight).sort((a, b) => a.city.localeCompare(b.city)).map(l => (
-                <option key={l.city} value={l.city}>{l.city}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={lbl}>Compare By</label>
-            <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
-              {[{ k: "milesper10k", l: L.per10k }, { k: "popPerMile", l: L.perCap }].map(({ k, l }) => (
-                <button key={k} onClick={() => setGMet(k)} style={{
-                  background: gMet === k ? T.orange : "transparent",
-                  color: gMet === k ? "#fff" : T.textSub,
-                  border: `1.5px solid ${gMet === k ? T.orange : T.border}`,
-                  borderRadius: 6, padding: "8px 6px", fontSize: 10, fontWeight: 700, cursor: "pointer", flex: 1, minHeight: 40,
-                }}>{l}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label style={lbl}>Cost / Mile — Low ($)</label>
-            <input type="number" value={cLow} min={1} onChange={e => setCLow(Math.max(1, +e.target.value))} style={inp} />
-          </div>
-          <div>
-            <label style={lbl}>Cost / Mile — High ($)</label>
-            <input type="number" value={cHigh} min={1} onChange={e => setCHigh(Math.max(1, +e.target.value))} style={inp} />
-          </div>
-        </div>
-
-        {gap && (gap.ahead ? (
-          <div style={{ background: `${T.good}18`, border: `1px solid ${T.good}40`, borderRadius: 8, padding: "13px 16px", fontSize: 13 }}>
-            <span style={{ color: T.good, fontWeight: 700 }}>✓ {highlight.split(",")[0]} already leads!</span>
-            <span style={{ color: T.textSub, marginLeft: 8 }}>
-              {highlight.split(",")[0]}'s {fmtN(gap.homeVal)} {gMet === "milesper10k" ? L.per10k : L.perCap} beats {bench.split(",")[0]}'s {fmtN(gap.bVal)}.
-            </span>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-            {[
-              { label: `${highlight.split(",")[0]} Now`,  val: fmtN(gap.homeVal),  sub: gMet === "milesper10k" ? L.per10k : L.perCap, color: T.orange, bg: `${T.orange}12`, bdr: `${T.orange}35` },
-              { label: `${bench.split(",")[0]} (benchmark)`, val: fmtN(gap.bVal),     sub: gMet === "milesper10k" ? L.per10k : L.perCap, color: T.blue,   bg: `${T.blue}10`,   bdr: `${T.blue}35`   },
-              { label: "Distance Needed",                 val: gapDist(gap.gapMi), sub: "to match benchmark",                          color: T.text,   bg: `${T.border}40`, bdr: T.border        },
-              { label: "Estimated Investment",            val: `${fmtMoney(gap.costLo)} – ${fmtMoney(gap.costHi)}`, sub: `at $${(cLow/1000).toFixed(0)}k–$${(cHigh/1000).toFixed(0)}k/mi`, color: T.text, bg: `${T.border}40`, bdr: T.border },
-            ].map(({ label, val, sub, color, bg, bdr }) => (
-              <div key={label} style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "12px 14px" }}>
-                <div style={{ fontSize: 10, color: T.textDim, textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: label === "Estimated Investment" ? 14 : 20, fontWeight: 800, color, fontFamily: "monospace", lineHeight: 1.3 }}>{val}</div>
-                <div style={{ fontSize: 10, color: T.textDim, marginTop: 2 }}>{sub}</div>
-              </div>
-            ))}
-          </div>
-        ))}
-
-        {/* Population comparison context note */}
-        {gap && (() => {
-          const hlData = locs.find(l => l.city === highlight);
-          const bnData = locs.find(l => l.city === bench);
-          if (!hlData || !bnData) return null;
-          const placeType = (p) => p < 1000 ? "village" : p < 20000 ? "town" : "city";
-          const fmtPopNote = (n) => n >= 10000 ? `${(n / 1000).toFixed(0)}k` : n.toLocaleString();
-          const hlType = placeType(hlData.population);
-          const bnType = placeType(bnData.population);
-          return (
-            <div style={{ marginTop: 12, padding: "9px 14px", background: `${T.textDim}18`, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 11, color: T.textSub, fontStyle: "italic" }}>
-              ℹ️ You are comparing <strong style={{ color: T.text, fontStyle: "normal" }}>{highlight}</strong>, a {hlType} of <strong style={{ color: T.text, fontStyle: "normal" }}>{fmtPopNote(hlData.population)}</strong>, to <strong style={{ color: T.text, fontStyle: "normal" }}>{bench}</strong>, a {bnType} of <strong style={{ color: T.text, fontStyle: "normal" }}>{fmtPopNote(bnData.population)}</strong>.
-              {hlData.population / bnData.population >= 5 && (
-                <span style={{ color: T.orange, marginLeft: 6, fontStyle: "normal", fontWeight: 600 }}>
-                  Large population differences can make per-capita comparisons misleading — consider filtering to a similar-size tier.
-                </span>
-              )}
-            </div>
-          );
-        })()}
-        </div>)}
-      </section>
-
-      {/* ── Master Data Table ────────────────────────────────────── */}
-      <section style={{ ...card, overflow: "hidden" }}>
-        <button onClick={() => setTableOpen(p => !p)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", background: "transparent", border: "none", cursor: "pointer", borderBottom: tableOpen ? `1px solid ${T.border}` : "none", minHeight: 44 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: T.blue, letterSpacing: 1.2, textTransform: "uppercase" }}>Master Data</span>
-            <span style={{ fontSize: 10, color: T.textDim }}>{locs.length} cities · click columns to sort</span>
-          </div>
-          <span style={{ color: T.textDim, fontSize: 12, marginLeft: 8, flexShrink: 0 }}>{tableOpen ? "▲" : "▼"}</span>
-        </button>
-        {tableOpen && (<div>
-        <div style={{ padding: "8px 18px 10px", borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: 10, color: T.textDim }}>
-            Trail/sq mi uses municipal boundaries — small towns may show inflated values. Enter 5yr growth via the Add Location tab.
-            {units === "both" && <span style={{ color: T.blue, marginLeft: 6 }}>Numeric cells: imp · metric</span>}
-          </div>
-        </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-            <thead>
-              <tr style={{ background: T.tHead }}>
-                {TABLE_COLS.map(c => (
-                  <th key={c.key} onClick={() => tSortBy(c.key)} style={{
-                    padding: "9px 12px", textAlign: c.align,
-                    color: tSort.key === c.key ? T.blue : T.textDim,
-                    fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: .5,
-                    cursor: "pointer", userSelect: "none", whiteSpace: "nowrap",
-                    borderBottom: `1px solid ${T.border}`,
-                  }}>
-                    {c.label}
-                    <span style={{ marginLeft: 3, fontSize: 9, color: tSort.key === c.key ? T.blue : T.textDim }}>
-                      {tSort.key === c.key ? (tSort.dir === "asc" ? "▲" : "▼") : "⇅"}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, i) => {
-                const home = row.city === highlight;
-                const c10k = row.milesper10k >= 100 ? T.good : row.milesper10k >= 15 ? T.mid : T.poor;
-                const cPop = row.popPerMile <= 50   ? T.good : row.popPerMile <= 500  ? T.mid : T.poor;
-                const cDen = row.trailsPerSqMi != null
-                  ? (row.trailsPerSqMi >= 10 ? T.good : row.trailsPerSqMi >= 2 ? T.mid : T.poor)
-                  : T.border;
-                const cGrw = row.milesAdded5yr != null ? (row.growthPct >= 50 ? T.good : T.mid) : T.border;
-                return (
-                  <tr key={row.city + i} style={{
-                    background: home ? `${T.orange}10` : i % 2 === 0 ? "transparent" : T.tAlt,
-                    borderLeft: `3px solid ${home ? T.orange : "transparent"}`,
-                  }}>
-                    <td style={{ padding: "7px 12px", color: home ? T.orange : T.text, fontWeight: home ? 700 : 400, whiteSpace: "nowrap" }}>
-                      {home && <span style={{ marginRight: 4 }}>📍</span>}{row.city}
-                    </td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: T.textSub, fontFamily: "monospace" }}>{row.population.toLocaleString()}</td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: T.textSub, fontFamily: "monospace" }}>{cellTrail(row.trails)}</td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: c10k, fontFamily: "monospace" }}>{cellPer10k(row.milesper10k)}</td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: cPop, fontFamily: "monospace" }}>{cellPerCap(row.popPerMile)}</td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: cDen, fontFamily: "monospace" }}>
-                      {row.trailsPerSqMi != null ? fmtN(row.trailsPerSqMi) : "—"}
-                    </td>
-                    <td style={{ padding: "7px 12px", textAlign: "right", color: cGrw, fontFamily: "monospace" }}>
-                      {row.milesAdded5yr != null ? `+${row.milesAdded5yr} mi` : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        </div>)}
-      </section>
-
-      {/* ── Data Disclaimer ──────────────────────────────────────── */}
-      <section style={{ marginTop: 20, padding: "16px 18px", background: `${T.border}30`, border: `1px solid ${T.border}`, borderRadius: 12 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: T.textDim, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-          Data Disclaimer
-        </div>
-        <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1.7 }}>
-          Population figures and trail mileage are approximate estimates compiled from publicly available sources including municipal websites, local trail organizations, and community databases. Values reflect conditions at the time of compilation and may not represent current figures.
-        </div>
-        <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1.7, marginTop: 6 }}>
-          Trail mileage typically refers to maintained singletrack network estimates and may include trails on adjacent lands managed by different jurisdictions (national forest, BLM, county open space). City area data uses approximate municipal boundary measurements — small incorporated towns with large surrounding trail systems will show inflated trail-density figures. Population size labels (village, town, city) are informal readability designations only.
-        </div>
-        <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1.7, marginTop: 6 }}>
-          This tool is intended for community reference and trail advocacy purposes. <strong style={{ color: T.textSub }}>Verify all figures with local trail organizations and municipal planning departments before citing in formal documents, grant applications, or public presentations.</strong>
-        </div>
-      </section>
-
-    </div>
-  );
+  var f = filtered();
+  if(S.metric==="scatter") renderScatter(f); else renderBars(f);
 }
 
+function renderBars(f){
+  if(!f.length){
+    $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">No cities in this tier selection.</div>';
+    $("chartLegend").innerHTML=""; return;
+  }
+  var key = S.metric;
+  var desc = key==="milesper10k";
+  var data = f.slice().sort(function(a,b){ return desc ? b[key]-a[key] : a[key]-b[key]; });
+  var conv = key==="milesper10k"?cv10k:cvCap;
+  var max = 0;
+  data.forEach(function(d){ var v=conv(d[key]); if(v>max)max=v; });
+  var barVar = key==="milesper10k"?"--blue":"--indigo";
 
-    /* ── Mount ── */
-    const container = document.getElementById("root");
-    const root = ReactDOM.createRoot(container);
-    root.render(<Dashboard />);
-  </script>
+  var rows = data.map(function(d){
+    var v = conv(d[key]);
+    var pct = max>0 ? Math.max(0.4,(v/max*100)) : 0;
+    var hl = d.city===S.highlight;
+    var L = UL[S.units];
+    var tip = esc(d.city)+" \u2014 "+L.per10k+": "+fmtN(cv10k(d.milesper10k))+" | "+L.perCap+": "+fmtN(cvCap(d.popPerMile))+" | Pop: "+d.population.toLocaleString();
+    return '<div class="bar-row" title="'+tip+'">'+
+      '<div class="bar-label'+(hl?" hl":"")+'">'+(hl?"&#128205; ":"")+esc(d.city)+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct.toFixed(1)+'%;background:'+(hl?"var(--orange)":"var("+barVar+")")+';opacity:'+(hl?1:.8)+'"></div></div>'+
+      '<div class="bar-val">'+fmtShort(+v.toFixed(1))+'</div></div>';
+  }).join("");
+
+  $("chartArea").innerHTML = '<div class="chart-scroll">'+rows+'</div>';
+  $("chartLegend").innerHTML =
+    '<span><span style="color:var('+barVar+')">&#9632;</span> All cities</span>'+
+    '<span><span style="color:var(--orange)">&#9632;</span> '+esc(firstName(S.highlight))+'</span>'+
+    '<span class="right">Showing '+f.length+' of '+S.locs.length+' cities</span>';
+}
+
+function renderScatter(f){
+  if(f.length<3){
+    $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">Select a tier with at least 3 cities to show the scatter plot.</div>';
+    $("chartLegend").innerHTML=""; return;
+  }
+  var W=700,H=420,padL=52,padR=20,padT=14,padB=46;
+  var pops=f.map(function(d){return d.population;}), trs=f.map(function(d){return d.trails;});
+  var lgMin=Math.log10(Math.min.apply(null,pops))-0.15, lgMax=Math.log10(Math.max.apply(null,pops))+0.15;
+  var yMax=Math.max.apply(null,trs)*1.12;
+  function X(p){ return padL+(Math.log10(p)-lgMin)/(lgMax-lgMin)*(W-padL-padR); }
+  function Y(t){ return H-padB-(t/yMax)*(H-padT-padB); }
+
+  // log-linear regression
+  var n=f.length,xs=f.map(function(d){return Math.log10(d.population);}),ys=trs;
+  var xm=xs.reduce(function(a,b){return a+b;},0)/n, ym=ys.reduce(function(a,b){return a+b;},0)/n;
+  var sxy=0,sxx=0;
+  for(var i=0;i<n;i++){ sxy+=(xs[i]-xm)*(ys[i]-ym); sxx+=(xs[i]-xm)*(xs[i]-xm); }
+  var sl=sxx===0?0:sxy/sxx, ic=ym-sl*xm;
+
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot of population versus trail miles">';
+  // grid + y ticks
+  var ySteps=5;
+  for(var yi=0;yi<=ySteps;yi++){
+    var tv=yMax/ySteps*yi, yy=Y(tv);
+    svg+='<line x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke="var(--grid)" stroke-dasharray="3 3"/>';
+    svg+='<text x="'+(padL-7)+'" y="'+(yy+3)+'" text-anchor="end" font-size="10" fill="var(--dim)">'+Math.round(tv)+'</text>';
+  }
+  // x ticks (decades)
+  [100,1000,10000,100000,1000000].forEach(function(t){
+    if(Math.log10(t)>=lgMin&&Math.log10(t)<=lgMax){
+      var xx=X(t);
+      svg+='<line x1="'+xx+'" y1="'+padT+'" x2="'+xx+'" y2="'+(H-padB)+'" stroke="var(--grid)" stroke-dasharray="3 3"/>';
+      svg+='<text x="'+xx+'" y="'+(H-padB+16)+'" text-anchor="middle" font-size="10" fill="var(--dim)">'+(t>=1e6?(t/1e6)+"M":t>=1000?(t/1000)+"k":t)+'</text>';
+    }
+  });
+  // axis labels
+  svg+='<text x="'+((padL+W-padR)/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--dim)">Population (log scale)</text>';
+  svg+='<text x="14" y="'+((padT+H-padB)/2)+'" text-anchor="middle" font-size="10" fill="var(--dim)" transform="rotate(-90 14 '+((padT+H-padB)/2)+')">Trail Miles</text>';
+  // trend line
+  var pts=[];
+  for(var s=0;s<=40;s++){
+    var lx=lgMin+(lgMax-lgMin)*s/40, ty=Math.max(0,sl*lx+ic);
+    pts.push(X(Math.pow(10,lx)).toFixed(1)+","+Y(Math.min(ty,yMax)).toFixed(1));
+  }
+  svg+='<polyline points="'+pts.join(" ")+'" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="6 3" opacity=".8"/>';
+  // dots (highlight last so it's on top)
+  var ordered=f.slice().sort(function(a,b){ return (a.city===S.highlight)-(b.city===S.highlight); });
+  ordered.forEach(function(d,idx){
+    var hl=d.city===S.highlight, cx=X(d.population), cy=Y(d.trails);
+    svg+='<circle class="sc-dot" data-i="'+S.locs.indexOf(d)+'" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(hl?7:5)+'" fill="'+(hl?"var(--orange)":"var(--blue)")+'" fill-opacity="'+(hl?1:.65)+'"'+(hl?' stroke="rgba(255,255,255,.35)" stroke-width="1.5"':"")+' style="cursor:pointer"><title>'+esc(d.city)+'</title></circle>';
+    if(hl) svg+='<text x="'+(cx+11)+'" y="'+(cy+4)+'" font-size="10" font-weight="bold" fill="var(--orange)">'+esc(firstName(d.city))+'</text>';
+  });
+  svg+='</svg>';
+
+  $("chartArea").innerHTML = '<div class="scatter-box">'+svg+'</div><div class="scatter-detail" id="scDetail">Tap or hover a dot to see city details.</div>';
+  $("chartArea").querySelectorAll(".sc-dot").forEach(function(c){
+    var show=function(){
+      var d=S.locs[+c.getAttribute("data-i")];
+      if(!d) return;
+      var L=UL[S.units];
+      $("scDetail").innerHTML='<strong style="color:'+(d.city===S.highlight?"var(--orange)":"var(--text)")+'">'+esc(d.city)+'</strong> &middot; Pop '+d.population.toLocaleString()+' &middot; '+d.trails+' mi trail &middot; '+L.per10k+': '+fmtN(cv10k(d.milesper10k))+' &middot; '+L.perCap+': '+fmtN(cvCap(d.popPerMile));
+    };
+    c.addEventListener("click",show);
+    c.addEventListener("mouseenter",show);
+  });
+  $("chartLegend").innerHTML =
+    '<span><span style="color:var(--blue)">&#9679;</span> All cities</span>'+
+    '<span><span style="color:var(--orange)">&#9679;</span> '+esc(firstName(S.highlight))+'</span>'+
+    '<span>&#9548;&#9548; Log-linear trend</span>'+
+    '<span class="right">Showing '+f.length+' of '+S.locs.length+' cities</span>';
+}
+
+function renderGap(){
+  $("gapHdr").className = "sec-hdr"+(S.open.gap?" open":"");
+  $("gapArrow").innerHTML = S.open.gap?"&#9650;":"&#9660;";
+  $("gapBody").style.display = S.open.gap?"block":"none";
+  $("gapHdrCity").textContent = "\u2014 "+S.highlight;
+  if(!S.open.gap) return;
+
+  // benchmark select
+  var sel=$("benchSelect");
+  var opts=S.locs.filter(function(l){return l.city!==S.highlight;})
+    .sort(function(a,b){return a.city.localeCompare(b.city);});
+  if(!opts.some(function(l){return l.city===S.bench;})) S.bench = opts.length?opts[0].city:S.bench;
+  sel.innerHTML = opts.map(function(l){
+    return '<option value="'+esc(l.city)+'"'+(l.city===S.bench?" selected":"")+'>'+esc(l.city)+'</option>';
+  }).join("");
+
+  // metric seg
+  var L=UL[S.units];
+  $("gapMetSeg").innerHTML =
+    '<button data-g="milesper10k" class="'+(S.gMet==="milesper10k"?"on":"")+'">'+esc(L.per10k)+'</button>'+
+    '<button data-g="popPerMile" class="'+(S.gMet==="popPerMile"?"on":"")+'">'+esc(L.perCap)+'</button>';
+  $("gapMetSeg").querySelectorAll("button").forEach(function(b){
+    b.onclick=function(){ S.gMet=b.getAttribute("data-g"); renderGap(); };
+  });
+
+  var home=S.locs.find(function(l){return l.city===S.highlight;});
+  var bc=S.locs.find(function(l){return l.city===S.bench;});
+  if(!home||!bc){ $("gapResults").innerHTML=""; $("gapNote").innerHTML=""; return; }
+
+  var cLow=Math.max(1,+$("cLow").value||50000), cHigh=Math.max(1,+$("cHigh").value||150000);
+  var targetMi = S.gMet==="milesper10k" ? bc.milesper10k*(home.population/10000) : home.population/bc.popPerMile;
+  var gapMi=Math.max(0,Math.ceil(targetMi-home.trails));
+  var homeVal=S.gMet==="milesper10k"?home.milesper10k:home.popPerMile;
+  var bVal=S.gMet==="milesper10k"?bc.milesper10k:bc.popPerMile;
+  var metricLbl=S.gMet==="milesper10k"?L.per10k:L.perCap;
+
+  function gapDist(mi){
+    if(S.units==="imperial") return "+"+mi.toLocaleString()+" mi";
+    if(S.units==="metric") return "+"+Math.ceil(mi*KM).toLocaleString()+" km";
+    return "+"+mi.toLocaleString()+" mi / "+Math.ceil(mi*KM).toLocaleString()+" km";
+  }
+
+  if(targetMi<=home.trails){
+    $("gapResults").innerHTML =
+      '<div class="gap-lead"><span style="color:var(--good);font-weight:700">&#10003; '+esc(firstName(S.highlight))+' already leads!</span>'+
+      '<span style="color:var(--sub);margin-left:8px">'+esc(firstName(S.highlight))+"'s "+fmtN(homeVal)+" "+esc(metricLbl)+" beats "+esc(firstName(S.bench))+"'s "+fmtN(bVal)+".</span></div>";
+  } else {
+    var cards=[
+      { lab:firstName(S.highlight)+" Now", val:fmtN(homeVal), sub:metricLbl, color:"var(--orange)", bg:"rgba(249,115,22,.08)", bdr:"rgba(249,115,22,.3)" },
+      { lab:firstName(S.bench)+" (benchmark)", val:fmtN(bVal), sub:metricLbl, color:"var(--blue)", bg:"rgba(72,149,239,.07)", bdr:"rgba(72,149,239,.3)" },
+      { lab:"Distance Needed", val:gapDist(gapMi), sub:"to match benchmark", color:"var(--text)", bg:"var(--alt)", bdr:"var(--border)" },
+      { lab:"Estimated Investment", val:fmtMoney(gapMi*cLow)+" \u2013 "+fmtMoney(gapMi*cHigh), sub:"at $"+(cLow/1000).toFixed(0)+"k\u2013$"+(cHigh/1000).toFixed(0)+"k/mi", color:"var(--text)", bg:"var(--alt)", bdr:"var(--border)", small:true }
+    ];
+    $("gapResults").innerHTML = '<div class="gap-cards">'+cards.map(function(c){
+      return '<div class="gap-card" style="background:'+c.bg+';border-color:'+c.bdr+'">'+
+        '<div class="lab">'+esc(c.lab)+'</div>'+
+        '<div class="val" style="color:'+c.color+(c.small?";font-size:14px":"")+'">'+esc(c.val)+'</div>'+
+        '<div class="sub">'+esc(c.sub)+'</div></div>';
+    }).join("")+'</div>';
+  }
+
+  // population comparison note
+  function placeType(p){ return p<1000?"village":p<20000?"town":"city"; }
+  function fp(n){ return n>=10000?(n/1000).toFixed(0)+"k":n.toLocaleString(); }
+  var warn = (home.population/bc.population>=5)
+    ? '<span class="warn">Large population differences can make per-capita comparisons misleading \u2014 consider filtering to a similar-size tier.</span>' : "";
+  $("gapNote").innerHTML =
+    '<div class="gap-note">&#8505;&#65039; You are comparing <strong>'+esc(S.highlight)+'</strong>, a '+placeType(home.population)+' of <strong>'+fp(home.population)+'</strong>, to <strong>'+esc(S.bench)+'</strong>, a '+placeType(bc.population)+' of <strong>'+fp(bc.population)+'</strong>.'+warn+'</div>';
+}
+
+function renderTable(){
+  $("tblHdr").className = "sec-hdr"+(S.open.tbl?" open":"");
+  $("tblArrow").innerHTML = S.open.tbl?"&#9650;":"&#9660;";
+  $("tblBody").style.display = S.open.tbl?"block":"none";
+  $("tblCount").textContent = S.locs.length+" cities \u00b7 click columns to sort";
+  if(!S.open.tbl) return;
+
+  var L=UL[S.units];
+  $("tblUnitNote").innerHTML = S.units==="both"?' <span style="color:var(--blue)">Numeric cells: imp \u00b7 metric</span>':"";
+  var COLS=[
+    { key:"city",          label:"City",              align:"left" },
+    { key:"population",    label:"Population",        align:"right" },
+    { key:"trails",        label:"Trail "+L.trail,    align:"right" },
+    { key:"milesper10k",   label:L.per10k,            align:"right" },
+    { key:"popPerMile",    label:L.perCap,            align:"right" },
+    { key:"trailsPerSqMi", label:"Trail / sq mi",     align:"right" },
+    { key:"milesAdded5yr", label:"5yr Growth",        align:"right" }
+  ];
+  $("tblHead").innerHTML = COLS.map(function(c){
+    var act=S.tSort.key===c.key;
+    var arrow=act?(S.tSort.dir==="asc"?"&#9650;":"&#9660;"):"&#8645;";
+    return '<th class="'+(act?"active":"")+'" data-k="'+c.key+'" style="text-align:'+c.align+'">'+esc(c.label)+' <span style="font-size:9px">'+arrow+'</span></th>';
+  }).join("");
+  $("tblHead").querySelectorAll("th").forEach(function(th){
+    th.onclick=function(){
+      var k=th.getAttribute("data-k");
+      if(S.tSort.key===k) S.tSort.dir = S.tSort.dir==="desc"?"asc":"desc";
+      else S.tSort={key:k,dir:"desc"};
+      renderTable();
+    };
+  });
+
+  var key=S.tSort.key, mdir=S.tSort.dir==="asc"?1:-1;
+  var rows=S.locs.slice().sort(function(a,b){
+    if(typeof a[key]==="string") return mdir*a[key].localeCompare(b[key]);
+    var av=a[key]==null?-Infinity:a[key], bv=b[key]==null?-Infinity:b[key];
+    return mdir*(av-bv);
+  });
+
+  function cellTrail(mi){
+    if(S.units==="both") return mi+" \u00b7 "+(mi*KM).toFixed(1);
+    return S.units==="metric"?(mi*KM).toFixed(1):String(mi);
+  }
+  function cell10k(v){ return S.units==="both"?fmtN(v)+" \u00b7 "+fmtN(v*KM):fmtN(cv10k(v)); }
+  function cellCap(v){ return S.units==="both"?fmtN(v)+" \u00b7 "+fmtN(v/KM):fmtN(cvCap(v)); }
+
+  $("tblRows").innerHTML = rows.map(function(r,i){
+    var hl=r.city===S.highlight;
+    var c10k=r.milesper10k>=100?"var(--good)":r.milesper10k>=15?"var(--mid)":"var(--poor)";
+    var cPop=r.popPerMile<=50?"var(--good)":r.popPerMile<=500?"var(--mid)":"var(--poor)";
+    var cDen=r.trailsPerSqMi!=null?(r.trailsPerSqMi>=10?"var(--good)":r.trailsPerSqMi>=2?"var(--mid)":"var(--poor)"):"var(--border)";
+    var cGrw=r.milesAdded5yr!=null?(r.growthPct>=50?"var(--good)":"var(--mid)"):"var(--border)";
+    return '<tr class="'+(hl?"hl-row":(i%2?"alt":""))+'">'+
+      '<td>'+(hl?"&#128205; ":"")+esc(r.city)+'</td>'+
+      '<td class="num" style="color:var(--sub)">'+r.population.toLocaleString()+'</td>'+
+      '<td class="num" style="color:var(--sub)">'+cellTrail(r.trails)+'</td>'+
+      '<td class="num" style="color:'+c10k+'">'+cell10k(r.milesper10k)+'</td>'+
+      '<td class="num" style="color:'+cPop+'">'+cellCap(r.popPerMile)+'</td>'+
+      '<td class="num" style="color:'+cDen+'">'+(r.trailsPerSqMi!=null?fmtN(r.trailsPerSqMi):"\u2014")+'</td>'+
+      '<td class="num" style="color:'+cGrw+'">'+(r.milesAdded5yr!=null?"+"+r.milesAdded5yr+" mi":"\u2014")+'</td></tr>';
+  }).join("");
+}
+
+function renderAll(){
+  renderHeader(); renderTabs(); renderHlPanel();
+  renderTiers(); renderChart(); renderGap(); renderTable();
+}
+
+/* ── Actions ──────────────────────────────────────────── */
+function setHighlight(city){
+  S.highlight=city;
+  if(S.bench===city){
+    var alt=S.locs.find(function(l){return l.city!==city;});
+    S.bench=alt?alt.city:DEFAULT_BENCH;
+  }
+  renderAll();
+}
+
+function addLocation(){
+  var city=$("fCity").value.trim(), pop=+$("fPop").value, tr=+$("fTrails").value;
+  var area=$("fArea").value?+$("fArea").value:null, grw=$("fGrowth").value?+$("fGrowth").value:null;
+  var ok=true;
+  function err(id,msg){ $(id.replace("f","e")).textContent=msg; $(id).classList.add("err"); ok=false; }
+  function clr(id){ var e=$(id.replace("f","e")); if(e)e.textContent=""; $(id).classList.remove("err"); }
+  ["fCity","fPop","fTrails","fArea"].forEach(clr);
+  if(!city) err("fCity","Required");
+  if(!pop||pop<=0) err("fPop","Must be > 0");
+  if(!tr||tr<=0) err("fTrails","Must be > 0");
+  if($("fArea").value&&area<=0) err("fArea","Must be > 0");
+  if(!ok) return;
+  S.locs.push(enrich({city:city,population:pop,trails:tr,areaSqMi:area,milesAdded5yr:grw}));
+  ["fCity","fPop","fTrails","fArea","fGrowth"].forEach(function(id){ $(id).value=""; });
+  renderAll();
+}
+
+function doReset(){
+  var custom=S.locs.length-SEED.length;
+  if(custom<=0) return;
+  if(!S.confirmRst){
+    S.confirmRst=true; renderTabs();
+    clearTimeout(S.confirmTimer);
+    S.confirmTimer=setTimeout(function(){ S.confirmRst=false; renderTabs(); },3000);
+    return;
+  }
+  clearTimeout(S.confirmTimer);
+  S.confirmRst=false;
+  S.locs=SEED.map(enrich);
+  if(!S.locs.some(function(l){return l.city===S.highlight;})) S.highlight=DEFAULT_HL;
+  if(!S.locs.some(function(l){return l.city===S.bench&&l.city!==S.highlight;})) S.bench=DEFAULT_BENCH;
+  renderAll();
+}
+
+/* ── Wire up ──────────────────────────────────────────── */
+S.locs = SEED.map(enrich);
+
+$("unitSeg").querySelectorAll("button").forEach(function(b){
+  b.onclick=function(){ S.units=b.getAttribute("data-u"); renderAll(); };
+});
+$("themeBtn").onclick=function(){
+  S.theme = S.theme==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",S.theme);
+  renderHeader(); renderChart();
+};
+$("tabAdd").onclick=function(){ S.panelTab=S.panelTab==="add"?null:"add"; renderTabs(); };
+$("tabHl").onclick=function(){ S.panelTab=S.panelTab==="highlight"?null:"highlight"; renderHlPanel(); renderTabs(); };
+$("resetBtn").onclick=doReset;
+$("addBtn").onclick=addLocation;
+$("hlSelect").onchange=function(){ setHighlight(this.value); };
+$("benchSelect").onchange=function(){ S.bench=this.value; renderGap(); };
+$("cLow").addEventListener("input",renderGap);
+$("cHigh").addEventListener("input",renderGap);
+$("tierHdr").onclick=function(){ S.open.tier=!S.open.tier; renderTiers(); };
+$("chartHdr").onclick=function(){ S.open.chart=!S.open.chart; renderChart(); };
+$("gapHdr").onclick=function(){ S.open.gap=!S.open.gap; renderGap(); };
+$("tblHdr").onclick=function(){ S.open.tbl=!S.open.tbl; renderTable(); };
+
+renderAll();
+</script>
 </body>
 </html>
