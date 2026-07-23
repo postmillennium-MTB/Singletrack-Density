@@ -1,27 +1,36 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="neutral">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Singletrack Density Dashboard</title>
 <style>
   :root[data-theme="dark"]{
-    --page:#09130e; --card:#0f1f16; --border:#1a3320;
-    --text:#e8ede9; --sub:#4b7a5a; --dim:#2d5c3a;
-    --input:#0c1a11; --inputbdr:#2a4030; --thead:#0b1910;
-    --alt:rgba(255,255,255,.015); --grid:#162b1e;
+    --page:#09130e; --card:#0f1f16; --border:#2a4a36;
+    --text:#e8ede9; --sub:#93a79a; --dim:#7c9184; --pillsub:#4b7a5a;
+    --input:#0c1a11; --inputbdr:#35573f; --thead:#0b1910;
+    --alt:rgba(255,255,255,.015); --grid:#25412f;
     --blue:#4895EF; --indigo:#818CF8; --orange:#F97316; --violet:#A78BFA;
-    --good:#4895EF; --mid:#7CBFE8; --poor:#2d5c3a; --error:#EF4444;
+    --good:#4895EF; --mid:#7CBFE8; --poor:#7c9184; --error:#F87171;
     --shadow:0 8px 28px rgba(0,0,0,.45);
   }
   :root[data-theme="light"]{
     --page:#E8E8EA; --card:#FFFFFF; --border:#D1D5DB;
-    --text:#111827; --sub:#374151; --dim:#9CA3AF;
+    --text:#111827; --sub:#374151; --dim:#9CA3AF; --pillsub:#374151;
     --input:#F9FAFB; --inputbdr:#D1D5DB; --thead:#F3F4F6;
     --alt:rgba(0,0,0,.025); --grid:#E5E7EB;
     --blue:#1D6FD8; --indigo:#4F46E5; --orange:#D05A0A; --violet:#6D28D9;
     --good:#1D6FD8; --mid:#5B9BD5; --poor:#9CA3AF; --error:#DC2626;
     --shadow:0 8px 28px rgba(0,0,0,.12);
+  }
+  :root[data-theme="neutral"]{
+    --page:#2b2d30; --card:#35373b; --border:#4c4f54;
+    --text:#eef0f1; --sub:#b7bbc0; --dim:#8b8f95; --pillsub:#5a5d63;
+    --input:#2f3134; --inputbdr:#53565c; --thead:#3a3c40;
+    --alt:rgba(255,255,255,.035); --grid:#4a4d52;
+    --blue:#5B9BD5; --indigo:#9C9FF0; --orange:#F2924A; --violet:#B39DF2;
+    --good:#5B9BD5; --mid:#8FBFE0; --poor:#8b8f95; --error:#EF6B62;
+    --shadow:0 8px 28px rgba(0,0,0,.28);
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -35,7 +44,8 @@
   button{font-family:inherit}
 
   /* Header */
-  header{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:18px}
+  header{margin-bottom:18px}
+  .hdr-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
   header h1{margin:0;font-size:23px;font-weight:800;letter-spacing:-.5px}
   header p{margin:3px 0 0;font-size:12px;color:var(--dim)}
   .hdr-left{flex:1;min-width:180px}
@@ -43,7 +53,10 @@
   .seg{display:flex;background:var(--input);border:1px solid var(--border);border-radius:22px;padding:3px;gap:2px}
   .seg button{background:transparent;color:var(--sub);border:none;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap}
   .seg button.on{background:var(--blue);color:#fff}
-  .theme-btn{background:var(--input);border:1px solid var(--border);border-radius:22px;padding:7px 14px;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap}
+  .theme-btn,.home-btn,.share-btn{background:var(--input);border:1px solid var(--border);border-radius:22px;padding:7px 14px;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+  .home-btn{flex-shrink:0}
+  .theme-btn:hover,.home-btn:hover,.share-btn:hover{opacity:.85}
+  .share-btn.copied{color:var(--good);border-color:var(--good)}
 
   /* Collapsible section header */
   .sec-hdr{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:transparent;border:none;cursor:pointer;min-height:44px;text-align:left}
@@ -82,7 +95,7 @@
   .pill.on-blue{background:var(--blue);border-color:var(--blue);color:#fff}
   .pill.on-indigo{background:var(--indigo);border-color:var(--indigo);color:#fff}
   .pill.on-violet{background:var(--violet);border-color:var(--violet);color:#fff}
-  .pill.on-sub{background:var(--sub);border-color:var(--sub);color:#fff}
+  .pill.on-sub{background:var(--pillsub);border-color:var(--pillsub);color:#fff}
   .pill.on-orange{background:var(--orange);border-color:var(--orange);color:#fff}
 
   .hint{font-size:11px;font-weight:600;color:var(--sub);margin:10px 0 12px}
@@ -147,22 +160,66 @@
   .disclaimer p{font-size:11px;color:var(--dim);line-height:1.7;margin:0 0 6px}
   .disclaimer strong{color:var(--sub)}
 
+  /* Castle Rock trail mileage card */
+  .cr-intro{font-size:12px;color:var(--sub);line-height:1.7;margin:0 0 10px}
+  .cr-intro a{color:var(--blue)}
+  .cr-sub{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px}
+  .cr-sub:first-of-type{margin-top:6px}
+  .cr-list{list-style:none;margin:0;padding:0}
+  .cr-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .cr-list li:last-child{border-bottom:none}
+  .cr-list li .n{color:var(--text);font-weight:600}
+  .cr-list li .v{color:var(--sub);font-family:ui-monospace,monospace;white-space:nowrap;text-align:right}
+  .cr-list li .v em{color:var(--dim);font-style:normal;font-size:10px;display:block;font-family:inherit}
+
+  /* Print / share summary (print-only) */
+  .print-summary{display:none}
+
   @media (max-width:480px){
     body{padding:12px 8px 40px}
     .bar-label{width:118px;font-size:10px}
     .bar-label.hl{font-size:11px}
     .sec-body{padding:13px 12px}
     .tab-btn{padding:11px 12px;font-size:11px}
+    .hdr-top{gap:10px}
+    header h1{font-size:20px}
+    .home-btn,.theme-btn,.share-btn{padding:7px 11px;font-size:11px}
+    .cr-list li{flex-direction:column;align-items:flex-start;gap:2px}
+    .cr-list li .v{text-align:left}
+  }
+
+  @media print{
+    :root{
+      --page:#fff !important; --card:#fff !important; --border:#ccc !important;
+      --text:#111 !important; --sub:#333 !important; --dim:#666 !important; --pillsub:#666 !important;
+      --input:#fff !important; --inputbdr:#ccc !important; --thead:#f2f2f2 !important;
+      --alt:#f7f7f7 !important; --grid:#ddd !important;
+      --blue:#1D6FD8 !important; --indigo:#4F46E5 !important; --orange:#B85A16 !important; --violet:#6D28D9 !important;
+      --good:#1D6FD8 !important; --mid:#5B9BD5 !important; --poor:#999 !important; --error:#B91C1C !important;
+      --shadow:none !important;
+    }
+    body{padding:0;background:#fff}
+    .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+    .hdr-ctrl,.tab-bar,#addBody,#hlBody,.reset-wrap,.sec-hdr .arrow,
+    th span,.pill,.seg-sm,.hl-reset,.home-btn{display:none!important}
+    .sec-body{display:block!important}
+    a{color:inherit;text-decoration:underline}
+    .print-summary{display:block;margin:0 0 14px;padding:10px 0;border-bottom:2px solid #111;font-size:11px;color:#333;line-height:1.6}
+    .print-summary strong{color:#111}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="print-summary" id="printSummary"></div>
 
   <header>
-    <div class="hdr-left">
-      <h1>Singletrack Density</h1>
-      <p>Trail access per capita &middot; <span id="cityCount">26</span> North American MTB destinations</p>
+    <div class="hdr-top">
+      <div class="hdr-left">
+        <h1>Singletrack Density</h1>
+        <p>Trail access per capita &middot; <span id="cityCount">26</span> North American MTB destinations</p>
+      </div>
+      <a class="home-btn" id="homeBtn" href="https://www.postmillenniumrenaissance.com" target="_top" rel="noopener">&#8617; PMR Home</a>
     </div>
     <div class="hdr-ctrl">
       <div class="seg" id="unitSeg">
@@ -170,7 +227,13 @@
         <button data-u="metric">Metric</button>
         <button data-u="both">Both</button>
       </div>
-      <button class="theme-btn" id="themeBtn">&#9728; Light</button>
+      <div class="seg" id="themeSeg">
+        <button data-t="neutral">Neutral</button>
+        <button data-t="light">Light</button>
+        <button data-t="dark">Dark</button>
+      </div>
+      <button class="share-btn" id="copyLinkBtn">&#128279; Copy Link</button>
+      <button class="share-btn" id="exportPdfBtn">&#128424; Export PDF</button>
     </div>
   </header>
 
@@ -265,6 +328,30 @@
     </div>
   </section>
 
+  <!-- Castle Rock trail mileage -->
+  <section class="card">
+    <button class="sec-hdr open" id="crHdr">
+      <span class="hdr-flex"><span class="ttl">Castle Rock Trail Mileage</span></span>
+      <span class="arrow" id="crArrow">&#9650;</span>
+    </button>
+    <div class="sec-body" id="crBody">
+      <p class="cr-intro">Of the 130 miles of Town of Castle Rock trails, ~41 miles are dirt (unpaved), natural-surface trails open to mountain biking. Source: <a href="https://www.crgov.com" target="_blank" rel="noopener">www.crgov.com</a></p>
+      <div class="cr-sub">Town-managed dirt trails open to bikes</div>
+      <ul class="cr-list">
+        <li><span class="n">Ridgeline Open Space</span><span class="v">~13.5 mi</span></li>
+        <li><span class="n">Philip S. Miller Park</span><span class="v">8 mi</span></li>
+        <li><span class="n">Metzler Family Open Space</span><span class="v">4 mi</span></li>
+        <li><span class="n">Quarry Mesa &amp; Rhyolite Regional Park</span><span class="v">3.1 mi</span></li>
+        <li><span class="n">Santa Fe Quarry Trail</span><span class="v">2 mi</span></li>
+      </ul>
+      <div class="cr-sub">Regional dirt, MTB legal</div>
+      <ul class="cr-list">
+        <li><span class="n">Macanta Community Trails</span><span class="v">~6 mi<em>Jointly managed with Douglas County</em></span></li>
+        <li><span class="n">Hidden Mesa Open Space</span><span class="v">4.7 mi<em>Jointly managed with Douglas County</em></span></li>
+      </ul>
+    </div>
+  </section>
+
   <!-- Disclaimer -->
   <div class="disclaimer">
     <div class="ttl">Data Disclaimer</div>
@@ -299,7 +386,7 @@ var SEED = [
   { city:"Harrisonburg, VA",        population:51000,  trails:110, areaSqMi:17.5,  milesAdded5yr:null },
   { city:"Bentonville, AR",         population:64800,  trails:300, areaSqMi:49.6,  milesAdded5yr:null },
   { city:"Ocala, FL",               population:71700,  trails:80,  areaSqMi:44.8,  milesAdded5yr:null },
-  { city:"Castle Rock, CO",         population:84000,  trails:35,  areaSqMi:34.8,  milesAdded5yr:null },
+  { city:"Castle Rock, CO",         population:84000,  trails:41.3,areaSqMi:34.8,  milesAdded5yr:null },
   { city:"Santa Fe, NM",            population:89000,  trails:115, areaSqMi:37.2,  milesAdded5yr:null },
   { city:"Duluth, MN",              population:88600,  trails:100, areaSqMi:87.2,  milesAdded5yr:null },
   { city:"Bellingham, WA",          population:96000,  trails:120, areaSqMi:26.6,  milesAdded5yr:null },
@@ -328,12 +415,13 @@ var UL = {
 /* ── State ────────────────────────────────────────────── */
 var S = {
   locs: [], highlight: DEFAULT_HL, bench: DEFAULT_BENCH,
-  units: "imperial", theme: "dark", metric: "milesper10k",
+  units: "imperial", theme: "neutral", metric: "milesper10k",
   activeTiers: [], panelTab: null, gMet: "milesper10k",
   tSort: { key:"milesper10k", dir:"desc" },
-  open: { tier:true, chart:true, gap:true, tbl:true },
+  open: { tier:true, chart:true, gap:true, tbl:true, cr:true },
   confirmRst: false, confirmTimer: null
 };
+var THEMES = ["neutral","light","dark"];
 
 /* ── Helpers ──────────────────────────────────────────── */
 function $(id){ return document.getElementById(id); }
@@ -373,7 +461,15 @@ function renderHeader(){
   $("cityCount").textContent = S.locs.length;
   var segBtns = $("unitSeg").querySelectorAll("button");
   segBtns.forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-u")===S.units); });
-  $("themeBtn").innerHTML = S.theme==="dark" ? "&#9728; Light" : "&#127769; Dark";
+  $("themeSeg").querySelectorAll("button").forEach(function(b){
+    b.classList.toggle("on", b.getAttribute("data-t")===S.theme);
+  });
+}
+
+function renderCr(){
+  $("crHdr").className = "sec-hdr"+(S.open.cr?" open":"");
+  $("crArrow").innerHTML = S.open.cr?"&#9650;":"&#9660;";
+  $("crBody").style.display = S.open.cr?"block":"none";
 }
 
 function renderTabs(){
@@ -722,7 +818,84 @@ function renderTable(){
 
 function renderAll(){
   renderHeader(); renderTabs(); renderHlPanel();
-  renderTiers(); renderChart(); renderGap(); renderTable();
+  renderTiers(); renderChart(); renderGap(); renderTable(); renderCr();
+  updateURL();
+}
+
+/* ── Shareable URL state ──────────────────────────────── */
+function updateURL(){
+  try{
+    var p = new URLSearchParams();
+    p.set("units", S.units);
+    p.set("theme", S.theme);
+    if(S.activeTiers.length) p.set("tiers", S.activeTiers.join(","));
+    p.set("hl", S.highlight);
+    p.set("bench", S.bench);
+    p.set("metric", S.metric);
+    p.set("gmet", S.gMet);
+    if($("cLow") && $("cLow").value) p.set("clow", $("cLow").value);
+    if($("cHigh") && $("cHigh").value) p.set("chigh", $("cHigh").value);
+    history.replaceState(null, "", "?"+p.toString());
+  }catch(e){}
+}
+
+function decodeURLState(){
+  try{
+    var p = new URLSearchParams(window.location.search);
+    if(!p.toString()) return;
+    if(p.has("units") && UL[p.get("units")]) S.units = p.get("units");
+    if(p.has("theme") && THEMES.indexOf(p.get("theme"))>=0) S.theme = p.get("theme");
+    if(p.has("tiers")){
+      S.activeTiers = p.get("tiers").split(",").filter(function(id){
+        return TIERS.some(function(t){ return t.id===id; });
+      });
+    }
+    if(p.has("hl") && S.locs.some(function(l){ return l.city===p.get("hl"); })) S.highlight = p.get("hl");
+    if(p.has("bench") && S.locs.some(function(l){ return l.city===p.get("bench"); })) S.bench = p.get("bench");
+    if(p.has("metric") && ["milesper10k","popPerMile","scatter"].indexOf(p.get("metric"))>=0) S.metric = p.get("metric");
+    if(p.has("gmet") && ["milesper10k","popPerMile"].indexOf(p.get("gmet"))>=0) S.gMet = p.get("gmet");
+    if(p.has("clow")) $("cLow").value = p.get("clow");
+    if(p.has("chigh")) $("cHigh").value = p.get("chigh");
+  }catch(e){}
+}
+
+function fallbackCopy(text){
+  try{
+    var ta=document.createElement("textarea");
+    ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+    document.body.removeChild(ta);
+  }catch(e){}
+}
+
+function copyLink(){
+  updateURL();
+  var url = window.location.href;
+  var btn = $("copyLinkBtn"), orig = btn.innerHTML;
+  function done(){
+    btn.innerHTML = "&#10003; Copied!"; btn.classList.add("copied");
+    setTimeout(function(){ btn.innerHTML=orig; btn.classList.remove("copied"); }, 2000);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(function(){ fallbackCopy(url); done(); });
+  } else {
+    fallbackCopy(url); done();
+  }
+}
+
+function exportPDF(){
+  var tiersTxt = S.activeTiers.length
+    ? S.activeTiers.map(function(id){
+        var t = TIERS.find(function(x){ return x.id===id; });
+        return t ? t.label : id;
+      }).join(", ")
+    : "All population tiers";
+  var now = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+  $("printSummary").innerHTML =
+    "<strong>Singletrack Density &mdash; Trail Access Report</strong> &middot; Generated "+esc(now)+"<br>"+
+    "Highlighted city: <strong>"+esc(S.highlight)+"</strong> &middot; Benchmark: <strong>"+esc(S.bench)+"</strong> &middot; "+
+    "Population filter: <strong>"+esc(tiersTxt)+"</strong> &middot; Units: <strong>"+esc(S.units)+"</strong>";
+  window.print();
 }
 
 /* ── Actions ──────────────────────────────────────────── */
@@ -771,27 +944,34 @@ function doReset(){
 
 /* ── Wire up ──────────────────────────────────────────── */
 S.locs = SEED.map(enrich);
+decodeURLState();
+document.documentElement.setAttribute("data-theme",S.theme);
 
 $("unitSeg").querySelectorAll("button").forEach(function(b){
   b.onclick=function(){ S.units=b.getAttribute("data-u"); renderAll(); };
 });
-$("themeBtn").onclick=function(){
-  S.theme = S.theme==="dark"?"light":"dark";
-  document.documentElement.setAttribute("data-theme",S.theme);
-  renderHeader(); renderChart();
-};
+$("themeSeg").querySelectorAll("button").forEach(function(b){
+  b.onclick=function(){
+    S.theme = b.getAttribute("data-t");
+    document.documentElement.setAttribute("data-theme",S.theme);
+    renderHeader(); renderChart(); updateURL();
+  };
+});
+$("copyLinkBtn").onclick=copyLink;
+$("exportPdfBtn").onclick=exportPDF;
 $("tabAdd").onclick=function(){ S.panelTab=S.panelTab==="add"?null:"add"; renderTabs(); };
 $("tabHl").onclick=function(){ S.panelTab=S.panelTab==="highlight"?null:"highlight"; renderHlPanel(); renderTabs(); };
 $("resetBtn").onclick=doReset;
 $("addBtn").onclick=addLocation;
 $("hlSelect").onchange=function(){ setHighlight(this.value); };
-$("benchSelect").onchange=function(){ S.bench=this.value; renderGap(); };
-$("cLow").addEventListener("input",renderGap);
-$("cHigh").addEventListener("input",renderGap);
+$("benchSelect").onchange=function(){ S.bench=this.value; renderGap(); updateURL(); };
+$("cLow").addEventListener("input",function(){ renderGap(); updateURL(); });
+$("cHigh").addEventListener("input",function(){ renderGap(); updateURL(); });
 $("tierHdr").onclick=function(){ S.open.tier=!S.open.tier; renderTiers(); };
 $("chartHdr").onclick=function(){ S.open.chart=!S.open.chart; renderChart(); };
 $("gapHdr").onclick=function(){ S.open.gap=!S.open.gap; renderGap(); };
 $("tblHdr").onclick=function(){ S.open.tbl=!S.open.tbl; renderTable(); };
+$("crHdr").onclick=function(){ S.open.cr=!S.open.cr; renderCr(); };
 
 renderAll();
 </script>
