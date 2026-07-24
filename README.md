@@ -16,7 +16,7 @@ An interactive trail advocacy tool for comparing singletrack trail access per ca
 
 The dashboard answers one question: *How does your city's trail network compare to the best trail towns in North America — and what would it cost to close the gap?*
 
-It ships with data for **38 cities** ranging from micro trail towns (East Burke, VT; Crested Butte, CO) to large urban areas (Austin, TX; Anchorage, AK), spanning the lower 48 plus **Alaska and Hawaii**, and lets you add your own locations for custom comparisons.
+It ships with data for **44 cities** ranging from micro trail towns (East Burke, VT; Crested Butte, CO) to large urban areas (Houston, TX; Anchorage, AK), spanning the lower 48 plus **Alaska and Hawaii**, with deep coverage of Texas trail towns (Austin, San Antonio, Houston, Fort Worth, El Paso, and more), and lets you add your own locations for custom comparisons.
 
 ---
 
@@ -113,7 +113,7 @@ Performance cells are color-coded: strong / moderate / below-average, matched to
 
 ---
 
-## Default Dataset (38 Cities)
+## Default Dataset (44 Cities)
 
 | City                    | Population | Trail Miles |
 | ----------------------- | ---------- | ----------- |
@@ -135,6 +135,7 @@ Performance cells are color-coded: strong / moderate / below-average, matched to
 | Anniston, AL            | 21,000     | 35          |
 | Marquette, MI           | 22,100     | 75          |
 | Squamish, BC            | 24,000     | 200         |
+| Weatherford, TX         | 31,000     | 15          |
 | Helena, MT              | 34,000     | 85          |
 | Prescott, AZ            | 46,000     | 50          |
 | Poway, CA               | 48,000     | 30          |
@@ -150,11 +151,16 @@ Performance cells are color-coded: strong / moderate / below-average, matched to
 | Santa Fe, NM            | 89,000     | 115         |
 | Bellingham, WA          | 96,000     | 120         |
 | Bend, OR                | 104,000    | 100         |
+| College Station, TX     | 120,000    | 20          |
 | Chattanooga, TN         | 184,000    | 125         |
 | Boise, ID               | 236,000    | 190         |
 | Reno, NV                | 268,000    | 90          |
 | Anchorage, AK           | 291,000    | 110         |
+| El Paso, TX             | 679,000    | 90          |
+| Fort Worth, TX          | 956,000    | 50          |
 | Austin, TX              | 980,000    | 150         |
+| San Antonio, TX         | 1,470,000  | 50          |
+| Houston, TX             | 2,300,000  | 30          |
 
 Trail-mile values reflect dirt, natural-surface singletrack open to mountain biking within or immediately adjacent to city limits. See [Data Sources and Methodology](#data-sources-and-methodology) for caveats.
 
@@ -297,6 +303,7 @@ Trail mileage figures are estimates compiled from:
 - Municipal parks and recreation department publications (e.g., crgov.com for Castle Rock)
 - IMBA and regional trail coalition reports
 - Community-contributed data and Pinkbike forum sources
+- Regional MTB advocacy chapters — including, for the Texas cities: Austin Ridge Riders (Austin), STORM (San Antonio), GHORBA and East Texas Trail Advocacy (Houston), Fort Worth Mountain Bikers' Association and Weatherford Mountain Bike Club (Fort Worth / Weatherford), Borderland MBA (El Paso), and the Brazos Valley MBA (College Station)
 
 Population figures are based on recent municipal estimates and U.S./Canadian census data.
 
