@@ -1,979 +1,3500 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="neutral">
+<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Singletrack Density Dashboard</title>
-<style>
-  :root[data-theme="dark"]{
-    --page:#09130e; --card:#0f1f16; --border:#2a4a36;
-    --text:#e8ede9; --sub:#93a79a; --dim:#7c9184; --pillsub:#4b7a5a;
-    --input:#0c1a11; --inputbdr:#35573f; --thead:#0b1910;
-    --alt:rgba(255,255,255,.015); --grid:#25412f;
-    --blue:#4895EF; --indigo:#818CF8; --orange:#F97316; --violet:#A78BFA;
-    --good:#4895EF; --mid:#7CBFE8; --poor:#7c9184; --error:#F87171;
-    --shadow:0 8px 28px rgba(0,0,0,.45);
-  }
-  :root[data-theme="light"]{
-    --page:#E8E8EA; --card:#FFFFFF; --border:#D1D5DB;
-    --text:#111827; --sub:#374151; --dim:#9CA3AF; --pillsub:#374151;
-    --input:#F9FAFB; --inputbdr:#D1D5DB; --thead:#F3F4F6;
-    --alt:rgba(0,0,0,.025); --grid:#E5E7EB;
-    --blue:#1D6FD8; --indigo:#4F46E5; --orange:#D05A0A; --violet:#6D28D9;
-    --good:#1D6FD8; --mid:#5B9BD5; --poor:#9CA3AF; --error:#DC2626;
-    --shadow:0 8px 28px rgba(0,0,0,.12);
-  }
-  :root[data-theme="neutral"]{
-    --page:#2b2d30; --card:#35373b; --border:#4c4f54;
-    --text:#eef0f1; --sub:#b7bbc0; --dim:#8b8f95; --pillsub:#5a5d63;
-    --input:#2f3134; --inputbdr:#53565c; --thead:#3a3c40;
-    --alt:rgba(255,255,255,.035); --grid:#4a4d52;
-    --blue:#5B9BD5; --indigo:#9C9FF0; --orange:#F2924A; --violet:#B39DF2;
-    --good:#5B9BD5; --mid:#8FBFE0; --poor:#8b8f95; --error:#EF6B62;
-    --shadow:0 8px 28px rgba(0,0,0,.28);
-  }
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    background:var(--page); color:var(--text);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    padding:18px 14px 48px; -webkit-text-size-adjust:100%;
-  }
-  .wrap{max-width:1100px;margin:0 auto}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:13px;overflow:hidden}
-  button{font-family:inherit}
-
-  /* Header */
-  header{margin-bottom:18px}
-  .hdr-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-  header h1{margin:0;font-size:23px;font-weight:800;letter-spacing:-.5px}
-  header p{margin:3px 0 0;font-size:12px;color:var(--dim)}
-  .hdr-left{flex:1;min-width:180px}
-  .hdr-ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .seg{display:flex;background:var(--input);border:1px solid var(--border);border-radius:22px;padding:3px;gap:2px}
-  .seg button{background:transparent;color:var(--sub);border:none;border-radius:18px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap}
-  .seg button.on{background:var(--blue);color:#fff}
-  .theme-btn,.home-btn,.share-btn{background:var(--input);border:1px solid var(--border);border-radius:22px;padding:7px 14px;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;min-height:36px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
-  .home-btn{flex-shrink:0}
-  .theme-btn:hover,.home-btn:hover,.share-btn:hover{opacity:.85}
-  .share-btn.copied{color:var(--good);border-color:var(--good)}
-
-  /* Collapsible section header */
-  .sec-hdr{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:transparent;border:none;cursor:pointer;min-height:44px;text-align:left}
-  .sec-hdr .ttl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--sub)}
-  .sec-hdr .badge{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:700;margin-left:8px}
-  .sec-hdr .arrow{color:var(--dim);font-size:12px;margin-left:8px;flex-shrink:0}
-  .sec-hdr.open{border-bottom:1px solid var(--border)}
-  .sec-body{padding:16px 18px}
-  .hdr-flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-
-  /* Tabs (Add / Highlight) */
-  .tab-bar{display:flex;align-items:stretch}
-  .tab-bar.open{border-bottom:1px solid var(--border)}
-  .tab-btn{background:transparent;border:none;border-bottom:2.5px solid transparent;padding:11px 18px;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);white-space:nowrap;min-height:44px}
-  .tab-btn.on-add{color:var(--blue);border-bottom-color:var(--blue)}
-  .tab-btn.on-hl{color:var(--orange);border-bottom-color:var(--orange)}
-  .reset-wrap{margin-left:auto;display:flex;align-items:center;padding-right:14px}
-  .reset-btn{background:transparent;color:var(--dim);border:1px solid transparent;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:default;transition:all .15s;min-height:36px}
-  .reset-btn.active{color:var(--sub);border-color:var(--border);cursor:pointer}
-  .reset-btn.confirm{color:var(--orange);border-color:var(--orange);background:rgba(249,115,22,.1);cursor:pointer}
-
-  /* Forms */
-  .grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px}
-  label.fld{display:block;font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-  label.fld .opt{color:var(--dim);font-weight:400;margin-left:4px;text-transform:none}
-  input,select{width:100%;background:var(--input);border:1px solid var(--inputbdr);border-radius:7px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;min-height:38px}
-  input.err{border-color:var(--error)}
-  .err-msg{font-size:10px;color:var(--error);margin-top:2px}
-  .btn-primary{margin-top:12px;background:var(--blue);border:none;border-radius:7px;padding:9px 20px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;min-height:40px}
-  .btn-primary:hover{opacity:.85}
-
-  /* Pills */
-  .pills{display:flex;gap:8px;flex-wrap:wrap}
-  .pill{background:transparent;color:var(--sub);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;line-height:1;transition:all .15s;white-space:nowrap}
-  .pill .cnt{opacity:.65;font-size:11px}
-  .pill.on-blue{background:var(--blue);border-color:var(--blue);color:#fff}
-  .pill.on-indigo{background:var(--indigo);border-color:var(--indigo);color:#fff}
-  .pill.on-violet{background:var(--violet);border-color:var(--violet);color:#fff}
-  .pill.on-sub{background:var(--pillsub);border-color:var(--pillsub);color:#fff}
-  .pill.on-orange{background:var(--orange);border-color:var(--orange);color:#fff}
-
-  .hint{font-size:11px;font-weight:600;color:var(--sub);margin:10px 0 12px}
-  .hint .hl-note{color:var(--orange);font-weight:700;margin-left:6px}
-  .note-dim{font-size:11px;color:var(--dim)}
-
-  /* Bar chart (pure divs) */
-  .chart-scroll{overflow-y:auto;max-height:500px;border-radius:4px}
-  .bar-row{display:flex;align-items:center;gap:8px;min-height:28px;padding:2px 0}
-  .bar-label{width:150px;flex-shrink:0;text-align:right;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bar-label.hl{color:var(--orange);font-weight:700;font-size:12px}
-  .bar-track{flex:1;height:20px;background:var(--alt);border-radius:0 4px 4px 0;position:relative}
-  .bar-fill{height:100%;border-radius:0 4px 4px 0;min-width:2px;transition:width .25s}
-  .bar-val{width:52px;flex-shrink:0;font-size:10px;color:var(--dim);font-family:ui-monospace,monospace}
-  .legend{margin-top:10px;display:flex;gap:14px;font-size:11px;color:var(--dim);flex-wrap:wrap}
-  .legend .right{margin-left:auto}
-
-  /* Scatter */
-  .scatter-box svg{width:100%;height:auto;display:block}
-  .scatter-detail{margin-top:8px;font-size:12px;color:var(--sub);min-height:18px}
-
-  /* Gap calculator */
-  .gap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-  .gap-card{border-radius:8px;padding:12px 14px;border:1px solid var(--border)}
-  .gap-card .lab{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-  .gap-card .val{font-size:20px;font-weight:800;font-family:ui-monospace,monospace;line-height:1.3}
-  .gap-card .sub{font-size:10px;color:var(--dim);margin-top:2px}
-  .gap-note{margin-top:12px;padding:9px 14px;background:var(--alt);border:1px solid var(--border);border-radius:7px;font-size:11px;color:var(--sub);font-style:italic;line-height:1.6}
-  .gap-note strong{color:var(--text);font-style:normal}
-  .gap-note .warn{color:var(--orange);font-style:normal;font-weight:600;margin-left:6px}
-  .gap-lead{background:rgba(72,149,239,.1);border:1px solid rgba(72,149,239,.35);border-radius:8px;padding:13px 16px;font-size:13px}
-  .seg-sm{display:flex;gap:5px;margin-top:2px}
-  .seg-sm button{flex:1;background:transparent;color:var(--sub);border:1.5px solid var(--border);border-radius:6px;padding:8px 6px;font-size:10px;font-weight:700;cursor:pointer;min-height:40px}
-  .seg-sm button.on{background:var(--orange);border-color:var(--orange);color:#fff}
-
-  /* Table */
-  .tbl-scroll{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  th{padding:9px 12px;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none;white-space:nowrap;border-bottom:1px solid var(--border);background:var(--thead);color:var(--dim)}
-  th.active{color:var(--blue)}
-  td{padding:7px 12px;white-space:nowrap}
-  td.num{text-align:right;font-family:ui-monospace,monospace}
-  tr.alt{background:var(--alt)}
-  tr.hl-row{background:rgba(249,115,22,.08)}
-  tr.hl-row td:first-child{color:var(--orange);font-weight:700}
-  tr.hl-row{border-left:3px solid var(--orange)}
-  tr:not(.hl-row){border-left:3px solid transparent}
-
-  /* Highlight stats card */
-  .hl-card{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:13px 16px;min-width:230px}
-  .hl-card .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
-  .hl-card .name{font-weight:700;color:var(--orange);font-size:13px}
-  .hl-card .tier{font-size:10px;background:rgba(249,115,22,.2);color:var(--orange);padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
-  .hl-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
-  .hl-stats .k{color:var(--dim);margin-bottom:1px}
-  .hl-stats .v{font-family:ui-monospace,monospace;font-weight:700}
-  .hl-reset{margin-top:7px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--dim);font-size:11px;cursor:pointer;font-weight:600}
-
-  /* Disclaimer */
-  .disclaimer{margin-top:20px;padding:16px 18px;background:var(--alt);border:1px solid var(--border);border-radius:12px}
-  .disclaimer .ttl{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-  .disclaimer p{font-size:11px;color:var(--dim);line-height:1.7;margin:0 0 6px}
-  .disclaimer strong{color:var(--sub)}
-
-  /* Castle Rock trail mileage card */
-  .cr-intro{font-size:12px;color:var(--sub);line-height:1.7;margin:0 0 10px}
-  .cr-intro a{color:var(--blue)}
-  .cr-sub{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px}
-  .cr-sub:first-of-type{margin-top:6px}
-  .cr-list{list-style:none;margin:0;padding:0}
-  .cr-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
-  .cr-list li:last-child{border-bottom:none}
-  .cr-list li .n{color:var(--text);font-weight:600}
-  .cr-list li .v{color:var(--sub);font-family:ui-monospace,monospace;white-space:nowrap;text-align:right}
-  .cr-list li .v em{color:var(--dim);font-style:normal;font-size:10px;display:block;font-family:inherit}
-
-  /* Print / share summary (print-only) */
-  .print-summary{display:none}
-
-  @media (max-width:480px){
-    body{padding:12px 8px 40px}
-    .bar-label{width:118px;font-size:10px}
-    .bar-label.hl{font-size:11px}
-    .sec-body{padding:13px 12px}
-    .tab-btn{padding:11px 12px;font-size:11px}
-    .hdr-top{gap:10px}
-    header h1{font-size:20px}
-    .home-btn,.theme-btn,.share-btn{padding:7px 11px;font-size:11px}
-    .cr-list li{flex-direction:column;align-items:flex-start;gap:2px}
-    .cr-list li .v{text-align:left}
-  }
-
-  @media print{
-    :root{
-      --page:#fff !important; --card:#fff !important; --border:#ccc !important;
-      --text:#111 !important; --sub:#333 !important; --dim:#666 !important; --pillsub:#666 !important;
-      --input:#fff !important; --inputbdr:#ccc !important; --thead:#f2f2f2 !important;
-      --alt:#f7f7f7 !important; --grid:#ddd !important;
-      --blue:#1D6FD8 !important; --indigo:#4F46E5 !important; --orange:#B85A16 !important; --violet:#6D28D9 !important;
-      --good:#1D6FD8 !important; --mid:#5B9BD5 !important; --poor:#999 !important; --error:#B91C1C !important;
-      --shadow:none !important;
+    <!-- frame-runtime -->
+    <base href="/_f/1784852681-0de2/">
+    <script>
+    window.__FRAME_PREAMBLE = {
+        "capabilities": {
+            "downloads": "downloads.BABDwU1K.js",
+            "mcp": "mcp.hoz5jxDa.js",
+            "permissions": "permissions.ByA9Fd8x.js",
+            "self": "self.D3u1zjZe.js",
+            "user": "user.Cp1-RnjB.js"
+        },
+        "transforms": "_transforms.DYk1Ltlh.js",
+        "comments": "_comments.DiwQajF_.js",
+        "translate": "_translate.C5leZL2A.js"
     }
-    body{padding:0;background:#fff}
-    .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
-    .hdr-ctrl,.tab-bar,#addBody,#hlBody,.reset-wrap,.sec-hdr .arrow,
-    th span,.pill,.seg-sm,.hl-reset,.home-btn{display:none!important}
-    .sec-body{display:block!important}
-    a{color:inherit;text-decoration:underline}
-    .print-summary{display:block;margin:0 0 14px;padding:10px 0;border-bottom:2px solid #111;font-size:11px;color:#333;line-height:1.6}
-    .print-summary strong{color:#111}
-  }
-</style>
+    </script>
+    <script>
+    (function() {
+        "use strict";
+        const we = "modulepreload",
+            Oe = function(e) {
+                return "/" + e
+            },
+            Se = {},
+            ee = function(t, n, c) {
+                let i = Promise.resolve();
+                function s(f) {
+                    const a = new Event("vite:preloadError", {
+                        cancelable: !0
+                    });
+                    if (a.payload = f, window.dispatchEvent(a), !a.defaultPrevented)
+                        throw f
+                }
+                return i.then(f => {
+                    for (const a of f || [])
+                        a.status === "rejected" && s(a.reason);
+                    return t().catch(s)
+                })
+            },
+            te = ["light", "dark", "system"];
+        function ne(e) {
+            if (e === null || typeof e != "object")
+                return !1;
+            const t = e.__frame_init;
+            return t !== null && typeof t == "object"
+        }
+        function Y(e) {
+            return e !== null && typeof e == "object" && e.__frame_size_poke === !0
+        }
+        function re(e) {
+            if (e === null || typeof e != "object")
+                return !1;
+            const t = e.__frame_theme;
+            if (t === null || typeof t != "object")
+                return !1;
+            const n = t.theme;
+            return typeof n == "string" && te.includes(n)
+        }
+        function se(e) {
+            try {
+                typeof reportError == "function" ? reportError(e) : setTimeout(() => {
+                    throw e
+                }, 0)
+            } catch {}
+        }
+        const oe = Object.freeze(Object.assign(Object.create(null), {
+                user: Object.freeze(Object.assign(Object.create(null), {
+                    id: null,
+                    isOwner: !1,
+                    canEdit: !1,
+                    name: null,
+                    avatarUrl: null,
+                    email: null
+                }))
+            })),
+            ie = {};
+        function K(e) {
+            if (window === top || e.type === "auxclick" && e.button !== 1)
+                return;
+            const t = e.composedPath ? e.composedPath() : [e.target];
+            let n = null;
+            for (let f = 0; f < t.length; f++) {
+                const a = t[f];
+                if (a && a.matches && a.matches("a[href],area[href]")) {
+                    n = a;
+                    break
+                }
+            }
+            if (!n && e.target && e.target.closest && (n = e.target.closest("a[href],area[href]")), !n)
+                return;
+            const c = n.getAttribute("href");
+            if (!c)
+                return;
+            let i,
+                s;
+            try {
+                i = new URL(c, document.baseURI),
+                s = new URL(document.baseURI).origin
+            } catch {
+                return
+            }
+            (i.protocol === "http:" || i.protocol === "https:") && i.origin !== s && (e.preventDefault(), parent.postMessage({
+                __frame_nav: !0,
+                url: i.href
+            }, "*"))
+        }
+        const x = {};
+        function I(e) {
+            if (window === top)
+                return;
+            const t = Date.now();
+            t - (x[e] || 0) < 500 || (x[e] = t, parent.postMessage({
+                __frame_engaged: !0,
+                kind: e
+            }, "*"))
+        }
+        const ae = 2e3,
+            J = ["wheel", "touchstart", "touchmove", "keydown", "pointerdown"];
+        let G = 0;
+        function ce(e) {
+            e.isTrusted && (G = Date.now())
+        }
+        function le() {
+            addEventListener("click", K, !0),
+            addEventListener("auxclick", K, !0)
+        }
+        function ue() {
+            for (let e = 0; e < J.length; e++)
+                addEventListener(J[e], ce, {
+                    capture: !0,
+                    passive: !0
+                });
+            addEventListener("scroll", e => {
+                e.isTrusted && Date.now() - G < ae && I("scroll")
+            }, {
+                capture: !0,
+                passive: !0
+            }),
+            addEventListener("pointermove", e => {
+                e.isTrusted && I("pointer")
+            }, {
+                capture: !0,
+                passive: !0
+            }),
+            addEventListener("click", e => {
+                e.isTrusted && I("click")
+            }, {
+                capture: !0,
+                passive: !0
+            })
+        }
+        const U = "__frame_scroll",
+            fe = 150,
+            de = 310,
+            pe = 160,
+            me = 3e4;
+        function he() {
+            let e = 0,
+                t = !1,
+                n = !1,
+                c = !1,
+                i = 0;
+            const s = p => {
+                    try {
+                        sessionStorage.setItem(U, JSON.stringify({
+                            y: p
+                        }))
+                    } catch {}
+                },
+                f = () => {
+                    if (t) {
+                        t = !1;
+                        return
+                    }
+                    n = !0,
+                    clearTimeout(e),
+                    e = setTimeout(() => s(scrollY), fe)
+                };
+            try {
+                addEventListener("scroll", f, {
+                    passive: !0
+                }),
+                addEventListener("pagehide", () => {
+                    clearTimeout(e),
+                    s(scrollY)
+                })
+            } catch {}
+            const a = () => {
+                let p;
+                try {
+                    p = sessionStorage.getItem(U)
+                } catch {
+                    return null
+                }
+                if (p === null)
+                    return null;
+                let b;
+                try {
+                    b = JSON.parse(p)
+                } catch {
+                    b = null
+                }
+                const l=b?.y;
+                if (!(typeof l == "number" && Number.isFinite(l) && l >= 0)) {
+                    try {
+                        sessionStorage.removeItem(U)
+                    } catch {}
+                    return null
+                }
+                return l
+            };
+            let _ = !1;
+            const h = p => {
+                    try {
+                        const b = scrollY;
+                        scrollTo({
+                            top: p,
+                            left: 0,
+                            behavior: "instant"
+                        }),
+                        i = p,
+                        c = !0,
+                        s(p);
+                        const l = scrollY;
+                        l !== b && (t = !0),
+                        l !== p && !_ && (_ = !0, addEventListener("load", () => {
+                            try {
+                                if (scrollY === l) {
+                                    const g = a();
+                                    h(g !== null ? g : i)
+                                }
+                            } catch {}
+                        }, {
+                            once: !0
+                        }))
+                    } catch {}
+                },
+                o = () => {
+                    try {
+                        return !!location.hash
+                    } catch {
+                        return !0
+                    }
+                };
+            let u = !1;
+            const d = () => {
+                try {
+                    if (u || innerWidth > de || innerHeight > pe)
+                        return;
+                    u = !0;
+                    const p = Date.now(),
+                        b = () => {
+                            try {
+                                removeEventListener("resize", b)
+                            } catch {}
+                            if (Date.now() - p > me || n || o())
+                                return;
+                            const l = a();
+                            h(l !== null ? l : i)
+                        };
+                    addEventListener("resize", b)
+                } catch {}
+            };
+            let m = !1,
+                y = !1;
+            return {
+                restore() {
+                    if (m || (m = !0, o()))
+                        return;
+                    const p = a();
+                    p !== null && (h(p), d())
+                },
+                promoted() {
+                    if (y || (y = !0, o()))
+                        return;
+                    const p = a();
+                    p !== null ? (h(p), d()) : c && h(i)
+                }
+            }
+        }
+        function ge(e, t, n) {
+            const c = [...t.values()].filter(i => i.targets.some(s => s.startsWith(e + ".")));
+            return {
+                wrap(i, s) {
+                    const f = `${e}.${i}`,
+                        a = c.filter(_ => _.targets.includes(f));
+                    return a.length === 0 ? (..._) => {
+                        try {
+                            return s(..._)
+                        } catch (h) {
+                            return Promise.reject(h)
+                        }
+                    } : (..._) => {
+                        let h = _;
+                        for (const u of a) {
+                            const d = u.module.parameters;
+                            if (d)
+                                try {
+                                    h = d(h)
+                                } catch {
+                                    return Promise.reject({
+                                        code: "transform_error",
+                                        id: u.id,
+                                        scope: e,
+                                        message: "parameters transform failed"
+                                    })
+                                }
+                        }
+                        let o;
+                        try {
+                            o = s(...h)
+                        } catch (u) {
+                            o = Promise.reject(u)
+                        }
+                        return o.then(u => {
+                            for (let d = a.length - 1; d >= 0; d--) {
+                                const m = a[d],
+                                    y = m.module.returns;
+                                if (y)
+                                    try {
+                                        u = y(u)
+                                    } catch {
+                                        return n({
+                                            id: m.id,
+                                            scope: e,
+                                            leg: "returns"
+                                        }), u
+                                    }
+                            }
+                            return u
+                        }, u => {
+                            for (let d = a.length - 1; d >= 0; d--) {
+                                const m = a[d],
+                                    y = m.module.throws;
+                                if (y)
+                                    try {
+                                        u = y(u)
+                                    } catch {
+                                        return n({
+                                            id: m.id,
+                                            scope: e,
+                                            leg: "throws"
+                                        }), Promise.reject(u)
+                                    }
+                            }
+                            return Promise.reject(u)
+                        })
+                    }
+                }
+            }
+        }
+        function _e(e, t, n, c=() => {}) {
+            const i = new Set(e.changes ?? []),
+                s = new Map;
+            for (const f of i) {
+                const a = t[f];
+                a && s.set(f, a)
+            }
+            return {
+                contract: e.contract,
+                changes: i,
+                flags: new Set(e.flags ?? []),
+                capabilities: e.capabilities ?? {},
+                capBudgets: e.capBudgets ?? {},
+                transforms: s,
+                shellOrigin: n.shellOrigin,
+                mount: n.mount,
+                pipe: f => ge(f, s, c)
+            }
+        }
+        (function() {
+            const e = Object.defineProperty,
+                t = globalThis,
+                n = ["RTCPeerConnection", "webkitRTCPeerConnection", "RTCDataChannel", "RTCIceCandidate", "RTCSessionDescription", "RTCRtpSender", "RTCRtpReceiver"];
+            let c = 0;
+            for (let i = 0; i < n.length; i++) {
+                const s = n[i];
+                try {
+                    e(t, s, {
+                        value: void 0,
+                        writable: !1,
+                        configurable: !1
+                    })
+                } catch {
+                    try {
+                        delete t[s]
+                    } catch {}
+                    try {
+                        e(t, s, {
+                            value: void 0,
+                            writable: !1,
+                            configurable: !0
+                        })
+                    } catch {}
+                }
+                typeof t[s] == "function" && c++
+            }
+            if (c && window !== top)
+                try {
+                    parent.postMessage({
+                        __frame_rtc_lockdown_failed: c
+                    }, "*")
+                } catch {}
+        })();
+        const ye = 1e4,
+            be = Object.freeze([...window.__FRAME_PREAMBLE?.origins ?? ["https://claude.ai", "https://preview.claude.ai"]]);
+        function V(e) {
+            for (const t of be)
+                if (t.endsWith(":*"))
+                    try {
+                        const n = new URL(e);
+                        if (`${n.protocol}//${n.hostname}:*` === t)
+                            return !0
+                    } catch {}
+                else if (e === t)
+                    return !0;
+            return !1
+        }
+        const T = Object.freeze({
+                ...window.__FRAME_PREAMBLE?.capabilities
+            }),
+            z=window.__FRAME_PREAMBLE?.transforms,
+            q=window.__FRAME_PREAMBLE?.comments,
+            $=window.__FRAME_PREAMBLE?.translate,
+            C = /^[\w.-]+\.js$/,
+            ve = /^[a-z][a-z0-9_-]{0,63}$/;
+        let X = null,
+            P = null;
+        function B(e, t, n) {
+            try {
+                Object.defineProperty(e, t, {
+                    value: n,
+                    writable: !1,
+                    configurable: !1,
+                    enumerable: !0
+                })
+            } catch {
+                try {
+                    Object.defineProperty(e, t, {
+                        value: n,
+                        writable: !1,
+                        configurable: !0,
+                        enumerable: !0
+                    })
+                } catch {}
+            }
+        }
+        let F = !1;
+        function Q(e) {
+            const t = document.documentElement;
+            e === "light" || e === "dark" ? (t.dataset.theme = e, t.style.colorScheme = e, F = !0) : F && (delete t.dataset.theme, t.style.colorScheme = "", F = !1)
+        }
+        const M = Object.assign(Object.create(null), {
+                mcp: Object.assign(Object.create(null), {
+                    watchTool: {
+                        handlerArg: 3
+                    }
+                })
+            }),
+            R = new Map;
+        function Z(e, t) {
+            const n = R.get(e);
+            if (!n)
+                return;
+            const c = Object.assign(Object.create(null), t);
+            Object.assign(n.impl, c),
+            n.impl.__settled = () => Promise.reject({
+                code: "capability_removed",
+                message: `${e}: method not in this runtime`
+            });
+            const i = n.queue;
+            n.queue = [];
+            for (const s of i) {
+                const f = c[s.method];
+                if (f)
+                    if(M[e]?.[s.method])
+                        try {
+                            s.resolve(f(...s.args))
+                        } catch {
+                            k(s, M[e][s.method].handlerArg, {
+                                code: "transform_error",
+                                message: `${e}.${s.method} rejected its arguments`
+                            })
+                        }
+                    else
+                        f(...s.args).then(s.resolve, s.reject);
+                else {
+                    const a = {
+                            code: "capability_removed",
+                            message: `${e}.${s.method} is not in this runtime`
+                        },
+                        _=M[e]?.[s.method];
+                    if (_) {
+                        k(s, _.handlerArg, a);
+                        continue
+                    }
+                    s.reject(a)
+                }
+            }
+        }
+        function Ee(e, t) {
+            const n = R.get(e);
+            if (!n)
+                return;
+            n.impl.__settled = () => Promise.reject(t);
+            const c = n.queue;
+            n.queue = [];
+            for (const i of c) {
+                const s=M[e]?.[i.method];
+                if (s) {
+                    k(i, s.handlerArg, t);
+                    continue
+                }
+                i.reject(t)
+            }
+        }
+        function N(e, t) {
+            const n = oe[e];
+            if (!n) {
+                Ee(e, t);
+                return
+            }
+            Z(e, Object.fromEntries(Object.entries(n).map(([c, i]) => [c, () => Promise.resolve(i)])))
+        }
+        function k(e, t, n) {
+            if(e.syncState?.dead)
+                return;
+            const c = e.args[t];
+            typeof c == "function" && queueMicrotask(() => {
+                if (!e.syncState?.dead)
+                    try {
+                        c({
+                            type: "error",
+                            error: n
+                        })
+                    } catch (i) {
+                        se(i)
+                    }
+            })
+        }
+        const H = Object.getOwnPropertyDescriptor(window, "claude");
+        if (window !== top && !(H && H.writable === !1)) {
+            le(),
+            ue();
+            let e = null;
+            try {
+                e = he()
+            } catch {}
+            const t = H?.value ?? {};
+            B(window, "claude", t);
+            const n = o => {
+                const u = {
+                    impl: Object.create(null),
+                    queue: []
+                };
+                R.set(o, u);
+                const d = u.impl,
+                    m = ie[o],
+                    y = m === void 0 ? d : () => {},
+                    p = new Proxy(y, {
+                        apply: (b, l, g) => {
+                            const v = m,
+                                O = d[v] ?? d.__settled;
+                            return O ? O(...g) : new Promise((E, w) => {
+                                u.queue.push({
+                                    method: v,
+                                    args: g,
+                                    resolve: E,
+                                    reject: w
+                                })
+                            })
+                        },
+                        get: (b, l) => {
+                            if (typeof l != "string" || l === "then" || l === "toJSON" || l === "valueOf")
+                                return;
+                            if (l === "toString")
+                                return Object.prototype.toString;
+                            if (m !== void 0 && (l === "call" || l === "apply" || l === "bind"))
+                                return Function.prototype[l];
+                            const g=M[o]?.[l];
+                            return g ? (...v) => {
+                                if (typeof v[g.handlerArg] != "function")
+                                    throw new TypeError(`${o}.${l} requires a handler function`);
+                                const O = d[l];
+                                if (O)
+                                    return O(...v);
+                                if (d.__settled) {
+                                    const S = {
+                                            dead: !1
+                                        },
+                                        A = {
+                                            args: [...v],
+                                            syncState: S
+                                        };
+                                    return d.__settled().catch(D => k(A, g.handlerArg, D)), () => {
+                                        S.dead = !0
+                                    }
+                                }
+                                let E = null;
+                                const w = {
+                                    dead: !1
+                                };
+                                return u.queue.push({
+                                    method: l,
+                                    args: v,
+                                    resolve: S => {
+                                        E = typeof S == "function" ? S : null,
+                                        w.dead&&E?.()
+                                    },
+                                    reject: () => {},
+                                    syncState: w
+                                }), () => {
+                                    w.dead = !0, E?.()
+                                }
+                            } : (...v) => {
+                                const O = d[l] ?? d.__settled;
+                                return O ? O(...v) : new Promise((E, w) => {
+                                    u.queue.push({
+                                        method: l,
+                                        args: v,
+                                        resolve: E,
+                                        reject: w
+                                    })
+                                })
+                            }
+                        },
+                        set: () => !1
+                    });
+                B(t, o, p)
+            };
+            for (const o of Object.keys(T)) {
+                if (t[o] !== void 0) {
+                    B(t, o, t[o]);
+                    continue
+                }
+                n(o)
+            }
+            let c = null,
+                i = null,
+                s = 0;
+            const f = o => {
+                o.source !== parent || !V(o.origin) || ne(o.data) && (c = o.data.__frame_init, P = o.origin, removeEventListener("message", f), clearTimeout(s), i?.())
+            };
+            addEventListener("message", f),
+            parent.postMessage({
+                __frame_connect: !0
+            }, "*");
+            const a = new Promise(o => {
+                    i = o,
+                    s = setTimeout(() => {
+                        removeEventListener("message", f),
+                        o()
+                    }, ye)
+                }),
+                _ = document.readyState === "loading" ? new Promise(o => document.addEventListener("DOMContentLoaded", () => o(), {
+                    once: !0
+                })) : Promise.resolve();
+            _.then(() => {
+                try {
+                    e?.restore()
+                } catch {}
+            });
+            const h = o => {
+                if (!(o.source !== parent || !V(o.origin)) && Y(o.data)) {
+                    removeEventListener("message", h);
+                    try {
+                        e?.promoted()
+                    } catch {}
+                }
+            };
+            addEventListener("message", h),
+            a.then(async () => {
+                if (!c || !P) {
+                    for (const r of R.keys())
+                        N(r, {
+                            code: "not_granted",
+                            message: "frame initialization did not arrive - capability unavailable"
+                        });
+                    return
+                }
+                Q(c.theme);
+                const o = P;
+                let u = !1,
+                    d = !1;
+                addEventListener("message", r => {
+                    if (r.source !== parent || r.origin !== o)
+                        return;
+                    re(r.data) && Q(r.data.__frame_theme.theme);
+                    const j=r.data?.__fc_mode;
+                    j && typeof j == "object" && !u && q && C.test(q) && (u = !0, m(q).then(W=>W.install?.(o, j.on === !0)).catch(() => {}));
+                    const L=r.data?.__ft_cmd;
+                    L && typeof L == "object" && !d && $ && C.test($) && (d = !0, m($).then(W=>W.install?.(o, L)).catch(() => {}))
+                });
+                const m = r => ee(() => import("/_runtime/" + r), void 0),
+                    y = Object.keys(c.capabilities ?? {});
+                for (const r of y)
+                    Object.hasOwn(T, r) || ve.test(r) && t[r] === void 0 && (n(r), N(r, {
+                        code: "capability_disabled",
+                        message: "capability not in this runtime generation"
+                    }));
+                const p = y.filter(r => Object.hasOwn(T, r)).map(r => [r, T[r]]).filter(r => typeof r[1] == "string" && C.test(r[1])),
+                    [b, ...l] = await Promise.allSettled([z && C.test(z) ? m(z) : Promise.resolve({}), ...p.map(([, r]) => m(r))]),
+                    g = P;
+                X = _e(c, b.status === "fulfilled"&&b.value?.TRANSFORMS || {}, {
+                    shellOrigin: g,
+                    mount: Z
+                }, r => parent.postMessage({
+                    __frame_cap_telemetry: r
+                }, g));
+                const v = r => parent.postMessage({
+                        __frame_cap_telemetry: {
+                            kind: "cap-load-error",
+                            cap: r
+                        }
+                    }, g),
+                    O = X;
+                l.forEach((r, j) => {
+                    const L = p[j][0];
+                    if (r.status !== "fulfilled") {
+                        v(L);
+                        return
+                    }
+                    try {
+                        r.value?.install?.(O)
+                    } catch {
+                        v(L)
+                    }
+                });
+                for (const [r, j] of R)
+                    if (!(j.queue.length === 0 && Object.keys(j.impl).length > 0)) {
+                        if (y.includes(r)) {
+                            N(r, {
+                                code: "capability_disabled",
+                                message: "capability not available in this session"
+                            });
+                            continue
+                        }
+                        N(r, {
+                            code: "not_granted",
+                            message: "capability not available in this session"
+                        })
+                    }
+                await _,
+                parent.postMessage({
+                    __frame_ready: !0
+                }, P);
+                let E = -1,
+                    w = 0;
+                const S = () => {
+                        w = 0;
+                        const r = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+                        r !== E && (E = r, parent.postMessage({
+                            __frame_size: !0,
+                            h: r
+                        }, g))
+                    },
+                    A = () => {
+                        w || (w = setTimeout(S, 200))
+                    },
+                    D = new ResizeObserver(A);
+                D.observe(document.documentElement),
+                document.body && D.observe(document.body),
+                document.addEventListener("load", A, !0), document.fonts?.ready.then(A, () => {}),
+                addEventListener("beforeprint", () => {
+                    E = -1,
+                    S()
+                }),
+                A(),
+                addEventListener("message", r => {
+                    if (!(r.source !== parent || r.origin !== g) && Y(r.data)) {
+                        try {
+                            e?.promoted()
+                        } catch {}
+                        E = -1,
+                        A()
+                    }
+                })
+            })
+        }
+    })();
+    </script>
+    <!-- /frame-runtime -->
+    <meta charset=utf8>
+    <meta name=viewport content="width=device-width,initial-scale=1">
+    <style>
+    :root {
+        color-scheme:light
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font: 14px -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #faf9f5;
+        color:#141413
+    }
+
+    img {
+        max-width: 100%
+    }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="print-summary" id="printSummary"></div>
+    <!DOCTYPE html>
+    <html lang="en" data-theme="neutral">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Singletrack Density Dashboard</title>
+        <style>
+        :root[data-theme="dark"] {
+            --page: #09130e;
+            --card: #0f1f16;
+            --border: #2a4a36;
+            --text: #e8ede9;
+            --sub: #93a79a;
+            --dim: #7c9184;
+            --pillsub: #4b7a5a;
+            --input: #0c1a11;
+            --inputbdr: #35573f;
+            --thead: #0b1910;
+            --alt: rgba(255, 255, 255, .015);
+            --grid: #25412f;
+            --blue: #4895EF;
+            --indigo: #818CF8;
+            --orange: #F97316;
+            --violet: #A78BFA;
+            --good: #4895EF;
+            --mid: #7CBFE8;
+            --poor: #7c9184;
+            --error: #F87171;
+            --shadow: 0 8px 28px rgba(0, 0, 0, .45);
+        }
 
-  <header>
-    <div class="hdr-top">
-      <div class="hdr-left">
-        <h1>Singletrack Density</h1>
-        <p>Trail access per capita &middot; <span id="cityCount">26</span> North American MTB destinations</p>
-      </div>
-      <a class="home-btn" id="homeBtn" href="https://www.postmillenniumrenaissance.com" target="_top" rel="noopener">&#8617; PMR Home</a>
-    </div>
-    <div class="hdr-ctrl">
-      <div class="seg" id="unitSeg">
-        <button data-u="imperial" class="on">Imperial</button>
-        <button data-u="metric">Metric</button>
-        <button data-u="both">Both</button>
-      </div>
-      <div class="seg" id="themeSeg">
-        <button data-t="neutral">Neutral</button>
-        <button data-t="light">Light</button>
-        <button data-t="dark">Dark</button>
-      </div>
-      <button class="share-btn" id="copyLinkBtn">&#128279; Copy Link</button>
-      <button class="share-btn" id="exportPdfBtn">&#128424; Export PDF</button>
-    </div>
-  </header>
+        :root[data-theme="light"] {
+            --page: #E8E8EA;
+            --card: #FFFFFF;
+            --border: #D1D5DB;
+            --text: #111827;
+            --sub: #374151;
+            --dim: #9CA3AF;
+            --pillsub: #374151;
+            --input: #F9FAFB;
+            --inputbdr: #D1D5DB;
+            --thead: #F3F4F6;
+            --alt: rgba(0, 0, 0, .025);
+            --grid: #E5E7EB;
+            --blue: #1D6FD8;
+            --indigo: #4F46E5;
+            --orange: #D05A0A;
+            --violet: #6D28D9;
+            --good: #1D6FD8;
+            --mid: #5B9BD5;
+            --poor: #9CA3AF;
+            --error: #DC2626;
+            --shadow: 0 8px 28px rgba(0, 0, 0, .12);
+        }
 
-  <!-- Add Location / Highlight panel -->
-  <section class="card">
-    <div class="tab-bar" id="tabBar">
-      <button class="tab-btn" id="tabAdd">+ Add Location <span id="tabAddArrow">&#9660;</span></button>
-      <button class="tab-btn" id="tabHl">&#128205; Highlight <span id="tabHlArrow">&#9660;</span></button>
-      <div class="reset-wrap"><button class="reset-btn" id="resetBtn">&#8634; Reset</button></div>
-    </div>
-    <div class="sec-body" id="addBody" style="display:none">
-      <div class="grid-form">
-        <div><label class="fld">City Name</label><input id="fCity" type="text" placeholder="Trail Town"><div class="err-msg" id="eCity"></div></div>
-        <div><label class="fld">Population</label><input id="fPop" type="number" min="0" placeholder="12000"><div class="err-msg" id="ePop"></div></div>
-        <div><label class="fld">Trail mi</label><input id="fTrails" type="number" min="0" placeholder="160"><div class="err-msg" id="eTrails"></div></div>
-        <div><label class="fld">City Area (sq mi)<span class="opt">opt</span></label><input id="fArea" type="number" min="0" placeholder="40"><div class="err-msg" id="eArea"></div></div>
-        <div><label class="fld">5yr Growth (mi)<span class="opt">opt</span></label><input id="fGrowth" type="number" min="0" placeholder="25"></div>
-      </div>
-      <button class="btn-primary" id="addBtn">Add Location</button>
-    </div>
-    <div class="sec-body" id="hlBody" style="display:none">
-      <div class="note-dim" style="margin-bottom:14px;font-weight:600;color:var(--sub)">
-        The highlighted city appears in orange throughout all charts and tables, and serves as the baseline in the Trail Gap Calculator. Castle Rock, CO is the default.
-      </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1;min-width:200px">
-          <label class="fld">Highlighted City</label>
-          <select id="hlSelect"></select>
-          <div id="hlResetWrap"></div>
+        :root[data-theme="neutral"] {
+            --page: #2b2d30;
+            --card: #35373b;
+            --border: #4c4f54;
+            --text: #eef0f1;
+            --sub: #b7bbc0;
+            --dim: #8b8f95;
+            --pillsub: #5a5d63;
+            --input: #2f3134;
+            --inputbdr: #53565c;
+            --thead: #3a3c40;
+            --alt: rgba(255, 255, 255, .035);
+            --grid: #4a4d52;
+            --blue: #5B9BD5;
+            --indigo: #9C9FF0;
+            --orange: #F2924A;
+            --violet: #B39DF2;
+            --good: #5B9BD5;
+            --mid: #8FBFE0;
+            --poor: #8b8f95;
+            --error: #EF6B62;
+            --shadow: 0 8px 28px rgba(0, 0, 0, .28);
+        }
+
+        *, * ::before, * ::after {
+            box-sizing: border-box
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: var(--page);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            padding: 18px 14px 48px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 13px;
+            overflow: hidden
+        }
+
+        button {
+            font-family: inherit
+        }/* Header */
+
+        header {
+            margin-bottom: 18px
+        }
+
+        .hdr-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 23px;
+            font-weight: 800;
+            letter-spacing: -.5px
+        }
+
+        header p {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: var(--dim)
+        }
+
+        .hdr-left {
+            flex: 1;
+            min-width: 180px
+        }
+
+        .hdr-ctrl {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .seg {
+            display: flex;
+            background: var(--input);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 3px;
+            gap: 2px
+        }
+
+        .seg button {
+            background: transparent;
+            color: var(--sub);
+            border: none;
+            border-radius: 18px;
+            padding: 6px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 36px;
+            white-space: nowrap
+        }
+
+        .seg button.on {
+            background: var(--blue);
+            color: #fff
+        }
+
+        .theme-btn, .home-btn, .share-btn {
+            background: var(--input);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 7px 14px;
+            color: var(--sub);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 36px;
+            white-space: nowrap;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .home-btn {
+            flex-shrink: 0
+        }
+
+        .theme-btn:hover, .home-btn:hover, .share-btn:hover {
+            opacity: .85
+        }
+
+        .share-btn.copied {
+            color: var(--good);
+            border-color: var(--good)
+        }/* Collapsible section header */
+
+        .sec-hdr {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 18px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            min-height: 44px;
+            text-align: left
+        }
+
+        .sec-hdr .ttl {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--sub)
+        }
+
+        .sec-hdr .badge {
+            font-size: 10px;
+            padding: 2px 9px;
+            border-radius: 10px;
+            font-weight: 700;
+            margin-left: 8px
+        }
+
+        .sec-hdr .arrow {
+            color: var(--dim);
+            font-size: 12px;
+            margin-left: 8px;
+            flex-shrink: 0
+        }
+
+        .sec-hdr.open {
+            border-bottom: 1px solid var(--border)
+        }
+
+        .sec-body {
+            padding: 16px 18px
+        }
+
+        .hdr-flex {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap
+        }/* Tabs (Add / Highlight) */
+
+        .tab-bar {
+            display: flex;
+            align-items: stretch
+        }
+
+        .tab-bar.open {
+            border-bottom: 1px solid var(--border)
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 2.5px solid transparent;
+            padding: 11px 18px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--sub);
+            white-space: nowrap;
+            min-height: 44px
+        }
+
+        .tab-btn.on-add {
+            color: var(--blue);
+            border-bottom-color: var(--blue)
+        }
+
+        .tab-btn.on-hl {
+            color: var(--orange);
+            border-bottom-color: var(--orange)
+        }
+
+        .reset-wrap {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            padding-right: 14px
+        }
+
+        .reset-btn {
+            background: transparent;
+            color: var(--dim);
+            border: 1px solid transparent;
+            border-radius: 7px;
+            padding: 6px 11px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: default;
+            transition: all .15s;
+            min-height: 36px
+        }
+
+        .reset-btn.active {
+            color: var(--sub);
+            border-color: var(--border);
+            cursor: pointer
+        }
+
+        .reset-btn.confirm {
+            color: var(--orange);
+            border-color: var(--orange);
+            background: rgba(249, 115, 22, .1);
+            cursor: pointer
+        }/* Forms */
+
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 9px
+        }
+
+        label.fld {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--sub);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 4px
+        }
+
+        label.fld .opt {
+            color: var(--dim);
+            font-weight: 400;
+            margin-left: 4px;
+            text-transform: none
+        }
+
+        input, select {
+            width: 100%;
+            background: var(--input);
+            border: 1px solid var(--inputbdr);
+            border-radius: 7px;
+            padding: 9px 10px;
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+            min-height: 38px
+        }
+
+        input.err {
+            border-color: var(--error)
+        }
+
+        .err-msg {
+            font-size: 10px;
+            color: var(--error);
+            margin-top: 2px
+        }
+
+        .btn-primary {
+            margin-top: 12px;
+            background: var(--blue);
+            border: none;
+            border-radius: 7px;
+            padding: 9px 20px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 40px
+        }
+
+        .btn-primary:hover {
+            opacity: .85
+        }/* Pills */
+
+        .pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .pill {
+            background: transparent;
+            color: var(--sub);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 40px;
+            line-height: 1;
+            transition: all .15s;
+            white-space: nowrap
+        }
+
+        .pill .cnt {
+            opacity: .65;
+            font-size: 11px
+        }
+
+        .pill.on-blue {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: #fff
+        }
+
+        .pill.on-indigo {
+            background: var(--indigo);
+            border-color: var(--indigo);
+            color: #fff
+        }
+
+        .pill.on-violet {
+            background: var(--violet);
+            border-color: var(--violet);
+            color: #fff
+        }
+
+        .pill.on-sub {
+            background: var(--pillsub);
+            border-color: var(--pillsub);
+            color: #fff
+        }
+
+        .pill.on-orange {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff
+        }
+
+        .hint {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--sub);
+            margin: 10px 0 12px
+        }
+
+        .hint .hl-note {
+            color: var(--orange);
+            font-weight: 700;
+            margin-left: 6px
+        }
+
+        .note-dim {
+            font-size: 11px;
+            color: var(--dim)
+        }/* Bar chart (pure divs) */
+
+        .chart-scroll {
+            overflow-y: auto;
+            max-height: 500px;
+            border-radius: 4px
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 28px;
+            padding: 2px 0
+        }
+
+        .bar-label {
+            width: 150px;
+            flex-shrink: 0;
+            text-align: right;
+            font-size: 11px;
+            color: var(--sub);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .bar-label.hl {
+            color: var(--orange);
+            font-weight: 700;
+            font-size: 12px
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 20px;
+            background: var(--alt);
+            border-radius: 0 4px 4px 0;
+            position: relative
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 0 4px 4px 0;
+            min-width: 2px;
+            transition: width .25s
+        }
+
+        .bar-val {
+            width: 52px;
+            flex-shrink: 0;
+            font-size: 10px;
+            color: var(--dim);
+            font-family: ui-monospace, monospace
+        }
+
+        .legend {
+            margin-top: 10px;
+            display: flex;
+            gap: 14px;
+            font-size: 11px;
+            color: var(--dim);
+            flex-wrap: wrap
+        }
+
+        .legend .right {
+            margin-left: auto
+        }/* Scatter */
+
+        .scatter-box svg {
+            width: 100%;
+            height: auto;
+            display: block
+        }
+
+        .scatter-detail {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--sub);
+            min-height: 18px
+        }/* Gap calculator */
+
+        .gap-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px
+        }
+
+        .gap-card {
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid var(--border)
+        }
+
+        .gap-card .lab {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 4px
+        }
+
+        .gap-card .val {
+            font-size: 20px;
+            font-weight: 800;
+            font-family: ui-monospace, monospace;
+            line-height: 1.3
+        }
+
+        .gap-card .sub {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 2px
+        }
+
+        .gap-note {
+            margin-top: 12px;
+            padding: 9px 14px;
+            background: var(--alt);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            font-size: 11px;
+            color: var(--sub);
+            font-style: italic;
+            line-height: 1.6
+        }
+
+        .gap-note strong {
+            color: var(--text);
+            font-style: normal
+        }
+
+        .gap-note .warn {
+            color: var(--orange);
+            font-style: normal;
+            font-weight: 600;
+            margin-left: 6px
+        }
+
+        .gap-lead {
+            background: rgba(72, 149, 239, .1);
+            border: 1px solid rgba(72, 149, 239, .35);
+            border-radius: 8px;
+            padding: 13px 16px;
+            font-size: 13px
+        }
+
+        .seg-sm {
+            display: flex;
+            gap: 5px;
+            margin-top: 2px
+        }
+
+        .seg-sm button {
+            flex: 1;
+            background: transparent;
+            color: var(--sub);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 40px
+        }
+
+        .seg-sm button.on {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff
+        }/* Table */
+
+        .tbl-scroll {
+            overflow-x: auto
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px
+        }
+
+        th {
+            padding: 9px 12px;
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border);
+            background: var(--thead);
+            color: var(--dim)
+        }
+
+        th.active {
+            color: var(--blue)
+        }
+
+        td {
+            padding: 7px 12px;
+            white-space: nowrap
+        }
+
+        td.num {
+            text-align: right;
+            font-family: ui-monospace, monospace
+        }
+
+        tr.alt {
+            background: var(--alt)
+        }
+
+        tr.hl-row {
+            background: rgba(249, 115, 22, .08)
+        }
+
+        tr.hl-row td:first-child {
+            color: var(--orange);
+            font-weight: 700
+        }
+
+        tr.hl-row {
+            border-left: 3px solid var(--orange)
+        }
+
+        tr:not(.hl-row) {
+            border-left: 3px solid transparent
+        }/* Highlight stats card */
+
+        .hl-card {
+            background: rgba(249, 115, 22, .08);
+            border: 1px solid rgba(249, 115, 22, .3);
+            border-radius: 10px;
+            padding: 13px 16px;
+            min-width: 230px
+        }
+
+        .hl-card .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            gap: 8px
+        }
+
+        .hl-card .name {
+            font-weight: 700;
+            color: var(--orange);
+            font-size: 13px
+        }
+
+        .hl-card .tier {
+            font-size: 10px;
+            background: rgba(249, 115, 22, .2);
+            color: var(--orange);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            white-space: nowrap
+        }
+
+        .hl-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            font-size: 11px
+        }
+
+        .hl-stats .k {
+            color: var(--dim);
+            margin-bottom: 1px
+        }
+
+        .hl-stats .v {
+            font-family: ui-monospace, monospace;
+            font-weight: 700
+        }
+
+        .hl-reset {
+            margin-top: 7px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            color: var(--dim);
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600
+        }/* Disclaimer */
+
+        .disclaimer {
+            margin-top: 20px;
+            padding: 16px 18px;
+            background: var(--alt);
+            border: 1px solid var(--border);
+            border-radius: 12px
+        }
+
+        .disclaimer .ttl {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px
+        }
+
+        .disclaimer p {
+            font-size: 11px;
+            color: var(--dim);
+            line-height: 1.7;
+            margin: 0 0 6px
+        }
+
+        .disclaimer strong {
+            color: var(--sub)
+        }/* Castle Rock trail mileage card */
+
+        .cr-intro {
+            font-size: 12px;
+            color: var(--sub);
+            line-height: 1.7;
+            margin: 0 0 10px
+        }
+
+        .cr-intro a {
+            color: var(--blue)
+        }
+
+        .cr-sub {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin: 14px 0 6px
+        }
+
+        .cr-sub:first-of-type {
+            margin-top: 6px
+        }
+
+        .cr-list {
+            list-style: none;
+            margin: 0;
+            padding: 0
+        }
+
+        .cr-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px
+        }
+
+        .cr-list li:last-child {
+            border-bottom: none
+        }
+
+        .cr-list li .n {
+            color: var(--text);
+            font-weight: 600
+        }
+
+        .cr-list li .v {
+            color: var(--sub);
+            font-family: ui-monospace, monospace;
+            white-space: nowrap;
+            text-align: right
+        }
+
+        .cr-list li .v em {
+            color: var(--dim);
+            font-style: normal;
+            font-size: 10px;
+            display: block;
+            font-family: inherit
+        }/* Print / share summary (print-only) */
+
+        .print-summary {
+            display: none
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 8px 40px
+            }
+
+            .bar-label {
+                width: 118px;
+                font-size: 10px
+            }
+
+            .bar-label.hl {
+                font-size: 11px
+            }
+
+            .sec-body {
+                padding: 13px 12px
+            }
+
+            .tab-btn {
+                padding: 11px 12px;
+                font-size: 11px
+            }
+
+            .hdr-top {
+                gap: 10px
+            }
+
+            header h1 {
+                font-size: 20px
+            }
+
+            .home-btn, .theme-btn, .share-btn {
+                padding: 7px 11px;
+                font-size: 11px
+            }
+
+            .cr-list li {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px
+            }
+
+            .cr-list li .v {
+                text-align: left
+            }
+        }
+
+        @media print {
+            :root {
+                --page: #fff !important;
+                --card: #fff !important;
+                --border: #ccc !important;
+                --text: #111 !important;
+                --sub: #333 !important;
+                --dim: #666 !important;
+                --pillsub: #666 !important;
+                --input: #fff !important;
+                --inputbdr: #ccc !important;
+                --thead: #f2f2f2 !important;
+                --alt: #f7f7f7 !important;
+                --grid: #ddd !important;
+                --blue: #1D6FD8 !important;
+                --indigo: #4F46E5 !important;
+                --orange: #B85A16 !important;
+                --violet: #6D28D9 !important;
+                --good: #1D6FD8 !important;
+                --mid: #5B9BD5 !important;
+                --poor: #999 !important;
+                --error: #B91C1C !important;
+                --shadow: none !important;
+            }
+
+            body {
+                padding: 0;
+                background: #fff
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                break-inside: avoid
+            }
+
+            .hdr-ctrl, .tab-bar, #addBody, #hlBody, .reset-wrap, .sec-hdr .arrow, th span, .pill, .seg-sm, .hl-reset, .home-btn {
+                display: none !important
+            }
+
+            .sec-body {
+                display: block !important
+            }
+
+            a {
+                color: inherit;
+                text-decoration: underline
+            }
+
+            .print-summary {
+                display: block;
+                margin: 0 0 14px;
+                padding: 10px 0;
+                border-bottom: 2px solid #111;
+                font-size: 11px;
+                color: #333;
+                line-height: 1.6
+            }
+
+            .print-summary strong {
+                color: #111
+            }
+        }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <div class="print-summary" id="printSummary"></div>
+
+            <header>
+                <div class="hdr-top">
+                    <div class="hdr-left">
+                        <h1>Singletrack Density</h1>
+                        <p>
+                            Trail access per capita &middot; 
+                            <span id="cityCount">26</span>
+                             North American MTB destinations
+                        </p>
+                    </div>
+                    <a class="home-btn" id="homeBtn" href="https://www.postmillenniumrenaissance.com" target="_top" rel="noopener">&#8617; PMR Home</a>
+                </div>
+                <div class="hdr-ctrl">
+                    <div class="seg" id="unitSeg">
+                        <button data-u="imperial" class="on">Imperial</button>
+                        <button data-u="metric">Metric</button>
+                        <button data-u="both">Both</button>
+                    </div>
+                    <div class="seg" id="themeSeg">
+                        <button data-t="light" title="Light theme">Chalk</button>
+                        <button data-t="neutral" title="Neutral gray theme">Granite</button>
+                        <button data-t="dark" title="Dark theme">Loam</button>
+                    </div>
+                    <button class="share-btn" id="copyLinkBtn">&#128279; Copy Link</button>
+                    <button class="share-btn" id="exportPdfBtn">&#128424; Export PDF</button>
+                </div>
+            </header>
+
+            <!-- Add Location / Highlight panel -->
+            <section class="card">
+                <div class="tab-bar" id="tabBar">
+                    <button class="tab-btn" id="tabAdd">
+                        + Add Location 
+                        <span id="tabAddArrow">&#9660;</span>
+                    </button>
+                    <button class="tab-btn" id="tabHl">
+                        &#128205; Highlight 
+                        <span id="tabHlArrow">&#9660;</span>
+                    </button>
+                    <div class="reset-wrap">
+                        <button class="reset-btn" id="resetBtn">&#8634; Reset</button>
+                    </div>
+                </div>
+                <div class="sec-body" id="addBody" style="display:none">
+                    <div class="grid-form">
+                        <div>
+                            <label class="fld">City Name</label>
+                            <input id="fCity" type="text" placeholder="Trail Town">
+                            <div class="err-msg" id="eCity"></div>
+                        </div>
+                        <div>
+                            <label class="fld">Population</label>
+                            <input id="fPop" type="number" min="0" placeholder="12000">
+                            <div class="err-msg" id="ePop"></div>
+                        </div>
+                        <div>
+                            <label class="fld">Trail mi</label>
+                            <input id="fTrails" type="number" min="0" placeholder="160">
+                            <div class="err-msg" id="eTrails"></div>
+                        </div>
+                        <div>
+                            <label class="fld">
+                                City Area (sq mi)
+                                <span class="opt">opt</span>
+                            </label>
+                            <input id="fArea" type="number" min="0" placeholder="40">
+                            <div class="err-msg" id="eArea"></div>
+                        </div>
+                        <div>
+                            <label class="fld">
+                                5yr Growth (mi)
+                                <span class="opt">opt</span>
+                            </label>
+                            <input id="fGrowth" type="number" min="0" placeholder="25">
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="addBtn">Add Location</button>
+                </div>
+                <div class="sec-body" id="hlBody" style="display:none">
+                    <div class="note-dim" style="margin-bottom:14px;font-weight:600;color:var(--sub)">
+                            The highlighted city appears in orange throughout all charts and tables, and serves as the baseline in the Trail Gap Calculator. Castle Rock, CO is the default.
+                          </div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+                        <div style="flex:1;min-width:200px">
+                            <label class="fld">Highlighted City</label>
+                            <select id="hlSelect"></select>
+                            <div id="hlResetWrap"></div>
+                        </div>
+                        <div id="hlCard"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Population tier filter -->
+            <section class="card">
+                <button class="sec-hdr open" id="tierHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl">Population Tier Filter</span>
+                        <span id="tierBadge"></span>
+                    </span>
+                    <span class="arrow" id="tierArrow">&#9650;</span>
+                </button>
+                <div class="sec-body" id="tierBody">
+                    <div class="note-dim" style="margin-bottom:11px">Select one or more population ranges to scope the charts. The data table always shows all cities.</div>
+                    <div class="pills" id="tierPills"></div>
+                    <div class="note-dim" id="tierSummary" style="margin-top:10px"></div>
+                </div>
+            </section>
+
+            <!-- Charts -->
+            <section class="card">
+                <button class="sec-hdr open" id="chartHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl">Charts</span>
+                        <span class="badge" id="chartBadge"></span>
+                    </span>
+                    <span class="arrow" id="chartArrow">&#9650;</span>
+                </button>
+                <div class="sec-body" id="chartBody">
+                    <div class="pills" id="modePills"></div>
+                    <div class="hint" id="chartHint"></div>
+                    <div id="chartArea"></div>
+                    <div class="legend" id="chartLegend"></div>
+                </div>
+            </section>
+
+            <!-- Location map -->
+            <section class="card">
+                <button class="sec-hdr open" id="mapHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl">Where These Trail Towns Are</span>
+                        <span class="note-dim" id="mapCount"></span>
+                    </span>
+                    <span class="arrow" id="mapArrow">&#9650;</span>
+                </button>
+                <div class="sec-body" id="mapBody">
+                    <div id="mapArea"></div>
+                    <div class="scatter-detail" id="mapDetail">Tap or hover a dot to see city details.</div>
+                    <div class="legend" id="mapLegend"></div>
+                </div>
+            </section>
+
+            <!-- Trail gap calculator -->
+            <section class="card">
+                <button class="sec-hdr open" id="gapHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl" style="color:var(--orange)">&#128205; Trail Gap Calculator</span>
+                        <span class="note-dim" id="gapHdrCity"></span>
+                    </span>
+                    <span class="arrow" id="gapArrow">&#9650;</span>
+                </button>
+                <div class="sec-body" id="gapBody">
+                    <div class="grid-form" style="margin-bottom:14px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
+                        <div>
+                            <label class="fld">Benchmark City</label>
+                            <select id="benchSelect"></select>
+                        </div>
+                        <div>
+                            <label class="fld">Compare By</label>
+                            <div class="seg-sm" id="gapMetSeg"></div>
+                        </div>
+                        <div>
+                            <label class="fld">Cost / Mile &mdash; Low ($)</label>
+                            <input id="cLow" type="number" min="1" value="50000">
+                        </div>
+                        <div>
+                            <label class="fld">Cost / Mile &mdash; High ($)</label>
+                            <input id="cHigh" type="number" min="1" value="150000">
+                        </div>
+                    </div>
+                    <div id="gapResults"></div>
+                    <div id="gapNote"></div>
+                </div>
+            </section>
+
+            <!-- Master data table -->
+            <section class="card">
+                <button class="sec-hdr open" id="tblHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl" style="color:var(--blue)">Master Data</span>
+                        <span class="note-dim" id="tblCount"></span>
+                    </span>
+                    <span class="arrow" id="tblArrow">&#9650;</span>
+                </button>
+                <div id="tblBody">
+                    <div style="padding:8px 18px 10px;border-bottom:1px solid var(--border)">
+                        <div class="note-dim" style="font-size:10px">
+                            Trail/sq mi uses municipal boundaries &mdash; small towns may show inflated values. Enter 5yr growth via the Add Location tab.
+                            <span id="tblUnitNote"></span>
+                        </div>
+                    </div>
+                    <div class="tbl-scroll">
+                        <table>
+                            <thead>
+                                <tr id="tblHead"></tr>
+                            </thead>
+                            <tbody id="tblRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Castle Rock trail mileage -->
+            <section class="card">
+                <button class="sec-hdr" id="crHdr">
+                    <span class="hdr-flex">
+                        <span class="ttl">Castle Rock Trail Mileage</span>
+                    </span>
+                    <span class="arrow" id="crArrow">&#9660;</span>
+                </button>
+                <div class="sec-body" id="crBody" style="display:none">
+                    <p class="cr-intro">
+                        Of the 130 miles of Town of Castle Rock trails, ~41 miles are dirt (unpaved), natural-surface trails open to mountain biking. Source: 
+                        <a href="https://www.crgov.com" target="_blank" rel="noopener">www.crgov.com</a>
+                    </p>
+                    <div class="cr-sub">Town-managed dirt trails open to bikes</div>
+                    <ul class="cr-list">
+                        <li>
+                            <span class="n">Ridgeline Open Space</span>
+                            <span class="v">~13.5 mi</span>
+                        </li>
+                        <li>
+                            <span class="n">Philip S. Miller Park</span>
+                            <span class="v">8 mi</span>
+                        </li>
+                        <li>
+                            <span class="n">Metzler Family Open Space</span>
+                            <span class="v">4 mi</span>
+                        </li>
+                        <li>
+                            <span class="n">Quarry Mesa &amp; Rhyolite Regional Park</span>
+                            <span class="v">3.1 mi</span>
+                        </li>
+                        <li>
+                            <span class="n">Santa Fe Quarry Trail</span>
+                            <span class="v">2 mi</span>
+                        </li>
+                    </ul>
+                    <div class="cr-sub">Regional dirt, MTB legal</div>
+                    <ul class="cr-list">
+                        <li>
+                            <span class="n">Macanta Community Trails</span>
+                            <span class="v">
+                                ~6 mi
+                                <em>Jointly managed with Douglas County</em>
+                            </span>
+                        </li>
+                        <li>
+                            <span class="n">Hidden Mesa Open Space</span>
+                            <span class="v">
+                                4.7 mi
+                                <em>Jointly managed with Douglas County</em>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Disclaimer -->
+            <div class="disclaimer">
+                <div class="ttl">Data Disclaimer</div>
+                <p>Population figures and trail mileage are approximate estimates compiled from publicly available sources including municipal websites, local trail organizations, and community databases. Values reflect conditions at the time of compilation and may not represent current figures.</p>
+                <p>Trail mileage typically refers to maintained singletrack network estimates and may include trails on adjacent lands managed by different jurisdictions (national forest, BLM, county open space). City area data uses approximate municipal boundary measurements &mdash; small incorporated towns with large surrounding trail systems will show inflated trail-density figures. Population size labels (village, town, city) are informal readability designations only.</p>
+                <p>
+                    This tool is intended for community reference and trail advocacy purposes. 
+                    <strong>Verify all figures with local trail organizations and municipal planning departments before citing in formal documents, grant applications, or public presentations.</strong>
+                </p>
+            </div>
+
         </div>
-        <div id="hlCard"></div>
-      </div>
-    </div>
-  </section>
 
-  <!-- Population tier filter -->
-  <section class="card">
-    <button class="sec-hdr open" id="tierHdr">
-      <span class="hdr-flex"><span class="ttl">Population Tier Filter</span><span id="tierBadge"></span></span>
-      <span class="arrow" id="tierArrow">&#9650;</span>
-    </button>
-    <div class="sec-body" id="tierBody">
-      <div class="note-dim" style="margin-bottom:11px">Select one or more population ranges to scope the charts. The data table always shows all cities.</div>
-      <div class="pills" id="tierPills"></div>
-      <div class="note-dim" id="tierSummary" style="margin-top:10px"></div>
-    </div>
-  </section>
+        <script>
+        "use strict";
 
-  <!-- Charts -->
-  <section class="card">
-    <button class="sec-hdr open" id="chartHdr">
-      <span class="hdr-flex"><span class="ttl">Charts</span><span class="badge" id="chartBadge"></span></span>
-      <span class="arrow" id="chartArrow">&#9650;</span>
-    </button>
-    <div class="sec-body" id="chartBody">
-      <div class="pills" id="modePills"></div>
-      <div class="hint" id="chartHint"></div>
-      <div id="chartArea"></div>
-      <div class="legend" id="chartLegend"></div>
-    </div>
-  </section>
+        /* ── Data ─────────────────────────────────────────────── */
+        var SEED = [
+        {
+            city: "East Burke, VT",
+            population: 150,
+            trails: 100,
+            areaSqMi: 47.0,
+            milesAdded5yr: null,
+            lat: 44.60,
+            lng: -71.93
+        },
+        {
+            city: "Copper Harbor, MI",
+            population: 100,
+            trails: 40,
+            areaSqMi: 8.2,
+            milesAdded5yr: null,
+            lat: 47.47,
+            lng: -87.89
+        },
+        {
+            city: "Downieville, CA",
+            population: 200,
+            trails: 80,
+            areaSqMi: 1.2,
+            milesAdded5yr: null,
+            lat: 39.56,
+            lng: -120.83
+        },
+        {
+            city: "Crested Butte, CO",
+            population: 1650,
+            trails: 450,
+            areaSqMi: 3.2,
+            milesAdded5yr: null,
+            lat: 38.87,
+            lng: -106.99
+        },
+        {
+            city: "Carrabassett Valley, ME",
+            population: 750,
+            trails: 80,
+            areaSqMi: 117.0,
+            milesAdded5yr: null,
+            lat: 45.07,
+            lng: -70.22
+        },
+        {
+            city: "Oakridge, OR",
+            population: 3200,
+            trails: 350,
+            areaSqMi: 2.5,
+            milesAdded5yr: null,
+            lat: 43.75,
+            lng: -122.46
+        },
+        {
+            city: "Crosby, MN",
+            population: 2300,
+            trails: 70,
+            areaSqMi: 1.8,
+            milesAdded5yr: null,
+            lat: 46.48,
+            lng: -93.96
+        },
+        {
+            city: "Moab, UT",
+            population: 5200,
+            trails: 150,
+            areaSqMi: 4.3,
+            milesAdded5yr: null,
+            lat: 38.57,
+            lng: -109.55
+        },
+        {
+            city: "Brevard, NC",
+            population: 7700,
+            trails: 300,
+            areaSqMi: 7.4,
+            milesAdded5yr: null,
+            lat: 35.23,
+            lng: -82.73
+        },
+        {
+            city: "Park City, UT",
+            population: 8400,
+            trails: 450,
+            areaSqMi: 16.8,
+            milesAdded5yr: null,
+            lat: 40.65,
+            lng: -111.50
+        },
+        {
+            city: "Sedona, AZ",
+            population: 9600,
+            trails: 200,
+            areaSqMi: 18.6,
+            milesAdded5yr: null,
+            lat: 34.87,
+            lng: -111.76
+        },
+        {
+            city: "Fruita, CO",
+            population: 14100,
+            trails: 130,
+            areaSqMi: 3.6,
+            milesAdded5yr: null,
+            lat: 39.16,
+            lng: -108.73
+        },
+        {
+            city: "Durango, CO",
+            population: 19500,
+            trails: 40,
+            areaSqMi: 17.0,
+            milesAdded5yr: null,
+            lat: 37.27,
+            lng: -107.88
+        },
+        {
+            city: "Golden, CO",
+            population: 20400,
+            trails: 35,
+            areaSqMi: 10.9,
+            milesAdded5yr: null,
+            lat: 39.76,
+            lng: -105.22
+        },
+        {
+            city: "Anniston, AL",
+            population: 21000,
+            trails: 35,
+            areaSqMi: 45.2,
+            milesAdded5yr: null,
+            lat: 33.66,
+            lng: -85.83
+        },
+        {
+            city: "Marquette, MI",
+            population: 22100,
+            trails: 75,
+            areaSqMi: 23.9,
+            milesAdded5yr: null,
+            lat: 46.55,
+            lng: -87.40
+        },
+        {
+            city: "Squamish, BC",
+            population: 24000,
+            trails: 200,
+            areaSqMi: 40.3,
+            milesAdded5yr: null,
+            lat: 49.70,
+            lng: -123.16
+        },
+        {
+            city: "Helena, MT",
+            population: 34000,
+            trails: 85,
+            areaSqMi: 46.0,
+            milesAdded5yr: null,
+            lat: 46.59,
+            lng: -112.04
+        },
+        {
+            city: "Prescott, AZ",
+            population: 46000,
+            trails: 50,
+            areaSqMi: 42.0,
+            milesAdded5yr: null,
+            lat: 34.54,
+            lng: -112.47
+        },
+        {
+            city: "Poway, CA",
+            population: 48000,
+            trails: 30,
+            areaSqMi: 39.4,
+            milesAdded5yr: null,
+            lat: 32.96,
+            lng: -117.04
+        },
+        {
+            city: "Harrisonburg, VA",
+            population: 51000,
+            trails: 110,
+            areaSqMi: 17.5,
+            milesAdded5yr: null,
+            lat: 38.45,
+            lng: -78.87
+        },
+        {
+            city: "Draper, UT",
+            population: 51000,
+            trails: 65,
+            areaSqMi: 29.9,
+            milesAdded5yr: null,
+            lat: 40.52,
+            lng: -111.86
+        },
+        {
+            city: "Carson City, NV",
+            population: 58600,
+            trails: 40,
+            areaSqMi: 145.0,
+            milesAdded5yr: null,
+            lat: 39.16,
+            lng: -119.77
+        },
+        {
+            city: "Bentonville, AR",
+            population: 64800,
+            trails: 300,
+            areaSqMi: 49.6,
+            milesAdded5yr: null,
+            lat: 36.37,
+            lng: -94.21
+        },
+        {
+            city: "Grand Junction, CO",
+            population: 66000,
+            trails: 55,
+            areaSqMi: 40.9,
+            milesAdded5yr: null,
+            lat: 39.06,
+            lng: -108.55
+        },
+        {
+            city: "Ocala, FL",
+            population: 71700,
+            trails: 80,
+            areaSqMi: 44.8,
+            milesAdded5yr: null,
+            lat: 29.19,
+            lng: -82.13
+        },
+        {
+            city: "Flagstaff, AZ",
+            population: 76800,
+            trails: 60,
+            areaSqMi: 66.0,
+            milesAdded5yr: null,
+            lat: 35.20,
+            lng: -111.65
+        },
+        {
+            city: "Castle Rock, CO",
+            population: 84000,
+            trails: 41.3,
+            areaSqMi: 34.8,
+            milesAdded5yr: null,
+            lat: 39.37,
+            lng: -104.86
+        },
+        {
+            city: "Duluth, MN",
+            population: 88600,
+            trails: 100,
+            areaSqMi: 87.2,
+            milesAdded5yr: null,
+            lat: 46.79,
+            lng: -92.10
+        },
+        {
+            city: "Santa Fe, NM",
+            population: 89000,
+            trails: 115,
+            areaSqMi: 37.2,
+            milesAdded5yr: null,
+            lat: 35.69,
+            lng: -105.94
+        },
+        {
+            city: "Bellingham, WA",
+            population: 96000,
+            trails: 120,
+            areaSqMi: 26.6,
+            milesAdded5yr: null,
+            lat: 48.75,
+            lng: -122.48
+        },
+        {
+            city: "Bend, OR",
+            population: 104000,
+            trails: 100,
+            areaSqMi: 33.6,
+            milesAdded5yr: null,
+            lat: 44.06,
+            lng: -121.31
+        },
+        {
+            city: "Chattanooga, TN",
+            population: 184000,
+            trails: 125,
+            areaSqMi: 143.1,
+            milesAdded5yr: null,
+            lat: 35.05,
+            lng: -85.31
+        },
+        {
+            city: "Boise, ID",
+            population: 236000,
+            trails: 190,
+            areaSqMi: 83.9,
+            milesAdded5yr: null,
+            lat: 43.62,
+            lng: -116.21
+        },
+        {
+            city: "Reno, NV",
+            population: 268000,
+            trails: 90,
+            areaSqMi: 112.0,
+            milesAdded5yr: null,
+            lat: 39.53,
+            lng: -119.81
+        },
+        {
+            city: "Anchorage, AK",
+            population: 291000,
+            trails: 110,
+            areaSqMi: null,
+            milesAdded5yr: null,
+            lat: 61.22,
+            lng: -149.90,
+            region: "ak"
+        },
+        {
+            city: "Austin, TX",
+            population: 980000,
+            trails: 150,
+            areaSqMi: 321.8,
+            milesAdded5yr: null,
+            lat: 30.27,
+            lng: -97.74
+        },
+        {
+            city: "Makawao, HI",
+            population: 7400,
+            trails: 15,
+            areaSqMi: 5.5,
+            milesAdded5yr: null,
+            lat: 20.86,
+            lng: -156.31,
+            region: "hi"
+        }
+        ];
 
-  <!-- Trail gap calculator -->
-  <section class="card">
-    <button class="sec-hdr open" id="gapHdr">
-      <span class="hdr-flex"><span class="ttl" style="color:var(--orange)">&#128205; Trail Gap Calculator</span><span class="note-dim" id="gapHdrCity"></span></span>
-      <span class="arrow" id="gapArrow">&#9650;</span>
-    </button>
-    <div class="sec-body" id="gapBody">
-      <div class="grid-form" style="margin-bottom:14px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
-        <div><label class="fld">Benchmark City</label><select id="benchSelect"></select></div>
-        <div><label class="fld">Compare By</label><div class="seg-sm" id="gapMetSeg"></div></div>
-        <div><label class="fld">Cost / Mile &mdash; Low ($)</label><input id="cLow" type="number" min="1" value="50000"></div>
-        <div><label class="fld">Cost / Mile &mdash; High ($)</label><input id="cHigh" type="number" min="1" value="150000"></div>
-      </div>
-      <div id="gapResults"></div>
-      <div id="gapNote"></div>
-    </div>
-  </section>
+        var DEFAULT_HL = "Castle Rock, CO";
+        var DEFAULT_BENCH = "Bentonville, AR";
+        var KM = 1.60934;
 
-  <!-- Master data table -->
-  <section class="card">
-    <button class="sec-hdr open" id="tblHdr">
-      <span class="hdr-flex"><span class="ttl" style="color:var(--blue)">Master Data</span><span class="note-dim" id="tblCount"></span></span>
-      <span class="arrow" id="tblArrow">&#9650;</span>
-    </button>
-    <div id="tblBody">
-      <div style="padding:8px 18px 10px;border-bottom:1px solid var(--border)">
-        <div class="note-dim" style="font-size:10px">Trail/sq mi uses municipal boundaries &mdash; small towns may show inflated values. Enter 5yr growth via the Add Location tab.<span id="tblUnitNote"></span></div>
-      </div>
-      <div class="tbl-scroll"><table><thead><tr id="tblHead"></tr></thead><tbody id="tblRows"></tbody></table></div>
-    </div>
-  </section>
+        var TIERS = [
+        {
+            id: "micro",
+            label: "< 5k",
+            min: 0,
+            max: 5000
+        },
+        {
+            id: "small",
+            label: "5k \u2013 25k",
+            min: 5000,
+            max: 25000
+        },
+        {
+            id: "smallmid",
+            label: "25k \u2013 50k",
+            min: 25000,
+            max: 50000
+        },
+        {
+            id: "mid",
+            label: "50k \u2013 150k",
+            min: 50000,
+            max: 150000
+        },
+        {
+            id: "large",
+            label: "150k+",
+            min: 150000,
+            max: Infinity
+        }
+        ];
 
-  <!-- Castle Rock trail mileage -->
-  <section class="card">
-    <button class="sec-hdr open" id="crHdr">
-      <span class="hdr-flex"><span class="ttl">Castle Rock Trail Mileage</span></span>
-      <span class="arrow" id="crArrow">&#9650;</span>
-    </button>
-    <div class="sec-body" id="crBody">
-      <p class="cr-intro">Of the 130 miles of Town of Castle Rock trails, ~41 miles are dirt (unpaved), natural-surface trails open to mountain biking. Source: <a href="https://www.crgov.com" target="_blank" rel="noopener">www.crgov.com</a></p>
-      <div class="cr-sub">Town-managed dirt trails open to bikes</div>
-      <ul class="cr-list">
-        <li><span class="n">Ridgeline Open Space</span><span class="v">~13.5 mi</span></li>
-        <li><span class="n">Philip S. Miller Park</span><span class="v">8 mi</span></li>
-        <li><span class="n">Metzler Family Open Space</span><span class="v">4 mi</span></li>
-        <li><span class="n">Quarry Mesa &amp; Rhyolite Regional Park</span><span class="v">3.1 mi</span></li>
-        <li><span class="n">Santa Fe Quarry Trail</span><span class="v">2 mi</span></li>
-      </ul>
-      <div class="cr-sub">Regional dirt, MTB legal</div>
-      <ul class="cr-list">
-        <li><span class="n">Macanta Community Trails</span><span class="v">~6 mi<em>Jointly managed with Douglas County</em></span></li>
-        <li><span class="n">Hidden Mesa Open Space</span><span class="v">4.7 mi<em>Jointly managed with Douglas County</em></span></li>
-      </ul>
-    </div>
-  </section>
+        var UL = {
+            imperial: {
+                trail: "mi",
+                per10k: "mi / 10k pop",
+                perCap: "pop / mi"
+            },
+            metric: {
+                trail: "km",
+                per10k: "km / 10k pop",
+                perCap: "pop / km"
+            },
+            both: {
+                trail: "mi\u00b7km",
+                per10k: "mi\u00b7km / 10k pop",
+                perCap: "pop / mi\u00b7km"
+            }
+        };
 
-  <!-- Disclaimer -->
-  <div class="disclaimer">
-    <div class="ttl">Data Disclaimer</div>
-    <p>Population figures and trail mileage are approximate estimates compiled from publicly available sources including municipal websites, local trail organizations, and community databases. Values reflect conditions at the time of compilation and may not represent current figures.</p>
-    <p>Trail mileage typically refers to maintained singletrack network estimates and may include trails on adjacent lands managed by different jurisdictions (national forest, BLM, county open space). City area data uses approximate municipal boundary measurements &mdash; small incorporated towns with large surrounding trail systems will show inflated trail-density figures. Population size labels (village, town, city) are informal readability designations only.</p>
-    <p>This tool is intended for community reference and trail advocacy purposes. <strong>Verify all figures with local trail organizations and municipal planning departments before citing in formal documents, grant applications, or public presentations.</strong></p>
-  </div>
+        /* ── State ────────────────────────────────────────────── */
+        var S = {
+            locs: [],
+            highlight: DEFAULT_HL,
+            bench: DEFAULT_BENCH,
+            units: "imperial",
+            theme: "neutral",
+            metric: "milesper10k",
+            activeTiers: [],
+            panelTab: null,
+            gMet: "milesper10k",
+            tSort: {
+                key: "milesper10k",
+                dir: "desc"
+            },
+            open: {
+                tier: true,
+                chart: true,
+                map: true,
+                gap: true,
+                tbl: true,
+                cr: false
+            },
+            confirmRst: false,
+            confirmTimer: null
+        };
+        var THEMES = ["neutral", "light", "dark"];
 
-</div>
+        /* ── Helpers ──────────────────────────────────────────── */
+        function $(id) {
+            return document.getElementById(id);
+        }
+        function enrich(d) {
+            return {
+                city: d.city,
+                population: d.population,
+                trails: d.trails,
+                areaSqMi: d.areaSqMi,
+                milesAdded5yr: d.milesAdded5yr,
+                lat: d.lat,
+                lng: d.lng,
+                region: d.region || "conus",
+                milesper10k: +((d.trails / (d.population / 10000)).toFixed(1)),
+                popPerMile: +((d.population / d.trails).toFixed(1)),
+                trailsPerSqMi: d.areaSqMi ? +((d.trails / d.areaSqMi).toFixed(2)) : null,
+                growthPct: (d.milesAdded5yr != null && d.trails) ? +((d.milesAdded5yr / d.trails * 100).toFixed(1)) : null
+            };
+        }
+        function esc(s) {
+            return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+        function fmtN(v) {
+            return (typeof v === "number") ? v.toLocaleString(undefined, {
+                maximumFractionDigits: 1
+            }) : "\u2014";
+        }
+        function fmtShort(v) {
+            return v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(v);
+        }
+        function fmtMoney(v) {
+            return v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : "$" + (v / 1e3).toFixed(0) + "k";
+        }
+        function cv10k(v) {
+            return S.units === "metric" ? v * KM : v;
+        }
+        function cvCap(v) {
+            return S.units === "metric" ? v / KM : v;
+        }
+        function cvTr(v) {
+            return S.units === "metric" ? v * KM : v;
+        }
+        function firstName(c) {
+            return c.split(",")[0];
+        }
+        function tierOf(p) {
+            for (var i = 0; i < TIERS.length; i++) {
+                if (p >= TIERS[i].min && p < TIERS[i].max)
+                    return TIERS[i];
+            }
+            return null;
+        }
+        function css(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
 
-<script>
-"use strict";
+        function filtered() {
+            if (!S.activeTiers.length)
+                return S.locs.slice();
+            return S.locs.filter(function(l) {
+                return S.activeTiers.some(function(id) {
+                    var t = null;
+                    for (var i = 0; i < TIERS.length; i++) {
+                        if (TIERS[i].id === id) {
+                            t = TIERS[i];
+                            break;
+                        }
+                    }
+                    return t && l.population >= t.min && l.population < t.max;
+                });
+            });
+        }
 
-/* ── Data ─────────────────────────────────────────────── */
-var SEED = [
-  { city:"East Burke, VT",         population:150,    trails:100, areaSqMi:47.0,  milesAdded5yr:null },
-  { city:"Copper Harbor, MI",       population:100,    trails:40,  areaSqMi:8.2,   milesAdded5yr:null },
-  { city:"Downieville, CA",         population:200,    trails:80,  areaSqMi:1.2,   milesAdded5yr:null },
-  { city:"Crested Butte, CO",       population:1650,   trails:450, areaSqMi:3.2,   milesAdded5yr:null },
-  { city:"Carrabassett Valley, ME", population:750,    trails:80,  areaSqMi:117.0, milesAdded5yr:null },
-  { city:"Oakridge, OR",            population:3200,   trails:350, areaSqMi:2.5,   milesAdded5yr:null },
-  { city:"Crosby, MN",              population:2300,   trails:70,  areaSqMi:1.8,   milesAdded5yr:null },
-  { city:"Moab, UT",                population:5200,   trails:150, areaSqMi:4.3,   milesAdded5yr:null },
-  { city:"Brevard, NC",             population:7700,   trails:300, areaSqMi:7.4,   milesAdded5yr:null },
-  { city:"Park City, UT",           population:8400,   trails:450, areaSqMi:16.8,  milesAdded5yr:null },
-  { city:"Sedona, AZ",              population:9600,   trails:200, areaSqMi:18.6,  milesAdded5yr:null },
-  { city:"Fruita, CO",              population:14100,  trails:130, areaSqMi:3.6,   milesAdded5yr:null },
-  { city:"Anniston, AL",            population:21000,  trails:35,  areaSqMi:45.2,  milesAdded5yr:null },
-  { city:"Marquette, MI",           population:22100,  trails:75,  areaSqMi:23.9,  milesAdded5yr:null },
-  { city:"Squamish, BC",            population:24000,  trails:200, areaSqMi:40.3,  milesAdded5yr:null },
-  { city:"Helena, MT",              population:34000,  trails:85,  areaSqMi:46.0,  milesAdded5yr:null },
-  { city:"Harrisonburg, VA",        population:51000,  trails:110, areaSqMi:17.5,  milesAdded5yr:null },
-  { city:"Bentonville, AR",         population:64800,  trails:300, areaSqMi:49.6,  milesAdded5yr:null },
-  { city:"Ocala, FL",               population:71700,  trails:80,  areaSqMi:44.8,  milesAdded5yr:null },
-  { city:"Castle Rock, CO",         population:84000,  trails:41.3,areaSqMi:34.8,  milesAdded5yr:null },
-  { city:"Santa Fe, NM",            population:89000,  trails:115, areaSqMi:37.2,  milesAdded5yr:null },
-  { city:"Duluth, MN",              population:88600,  trails:100, areaSqMi:87.2,  milesAdded5yr:null },
-  { city:"Bellingham, WA",          population:96000,  trails:120, areaSqMi:26.6,  milesAdded5yr:null },
-  { city:"Chattanooga, TN",         population:184000, trails:125, areaSqMi:143.1, milesAdded5yr:null },
-  { city:"Boise, ID",               population:236000, trails:190, areaSqMi:83.9,  milesAdded5yr:null },
-  { city:"Austin, TX",              population:980000, trails:150, areaSqMi:321.8, milesAdded5yr:null }
-];
+        /* ── Renders ──────────────────────────────────────────── */
+        function renderHeader() {
+            $("cityCount").textContent = S.locs.length;
+            var segBtns = $("unitSeg").querySelectorAll("button");
+            segBtns.forEach(function(b) {
+                b.classList.toggle("on", b.getAttribute("data-u") === S.units);
+            });
+            $("themeSeg").querySelectorAll("button").forEach(function(b) {
+                b.classList.toggle("on", b.getAttribute("data-t") === S.theme);
+            });
+        }
 
-var DEFAULT_HL = "Castle Rock, CO";
-var DEFAULT_BENCH = "Bentonville, AR";
-var KM = 1.60934;
+        function renderCr() {
+            $("crHdr").className = "sec-hdr" + (S.open.cr ? " open" : "");
+            $("crArrow").innerHTML = S.open.cr ? "&#9650;" : "&#9660;";
+            $("crBody").style.display = S.open.cr ? "block" : "none";
+        }
 
-var TIERS = [
-  { id:"micro", label:"< 5k",       min:0,      max:5000 },
-  { id:"small", label:"5k \u2013 50k",   min:5000,   max:50000 },
-  { id:"mid",   label:"50k \u2013 150k", min:50000,  max:150000 },
-  { id:"large", label:"150k+",      min:150000, max:Infinity }
-];
+        function renderTabs() {
+            var addOn = S.panelTab === "add",
+                hlOn = S.panelTab === "highlight";
+            $("tabAdd").className = "tab-btn" + (addOn ? " on-add" : "");
+            $("tabHl").className = "tab-btn" + (hlOn ? " on-hl" : "");
+            $("tabAddArrow").innerHTML = addOn ? "&#9650;" : "&#9660;";
+            $("tabHlArrow").innerHTML = hlOn ? "&#9650;" : "&#9660;";
+            $("tabBar").className = "tab-bar" + (S.panelTab ? " open" : "");
+            $("addBody").style.display = addOn ? "block" : "none";
+            $("hlBody").style.display = hlOn ? "block" : "none";
 
-var UL = {
-  imperial:{ trail:"mi",       per10k:"mi / 10k pop",       perCap:"pop / mi" },
-  metric:  { trail:"km",       per10k:"km / 10k pop",       perCap:"pop / km" },
-  both:    { trail:"mi\u00b7km", per10k:"mi\u00b7km / 10k pop", perCap:"pop / mi\u00b7km" }
-};
+            var custom = S.locs.length - SEED.length;
+            var rb = $("resetBtn");
+            if (S.confirmRst) {
+                rb.className = "reset-btn confirm";
+                rb.innerHTML = "&#9888; Confirm reset?";
+            }
+            else if (custom > 0) {
+                rb.className = "reset-btn active";
+                rb.innerHTML = "&#8634; Reset (" + custom + " added)";
+            }
+            else {
+                rb.className = "reset-btn";
+                rb.innerHTML = "&#8634; Reset";
+            }
+        }
 
-/* ── State ────────────────────────────────────────────── */
-var S = {
-  locs: [], highlight: DEFAULT_HL, bench: DEFAULT_BENCH,
-  units: "imperial", theme: "neutral", metric: "milesper10k",
-  activeTiers: [], panelTab: null, gMet: "milesper10k",
-  tSort: { key:"milesper10k", dir:"desc" },
-  open: { tier:true, chart:true, gap:true, tbl:true, cr:true },
-  confirmRst: false, confirmTimer: null
-};
-var THEMES = ["neutral","light","dark"];
+        function renderHlPanel() {
+            var sel = $("hlSelect");
+            var sorted = S.locs.slice().sort(function(a, b) {
+                return a.city.localeCompare(b.city);
+            });
+            sel.innerHTML = sorted.map(function(l) {
+                return '<option value="' + esc(l.city) + '"' + (l.city === S.highlight ? " selected" : "") + '>' + esc(l.city) + '</option>';
+            }).join("");
+            $("hlResetWrap").innerHTML = (S.highlight !== DEFAULT_HL)
+            ? '<button class="hl-reset" id="hlResetBtn">&larr; Reset to Castle Rock</button>' : "";
+            var btn = $("hlResetBtn");
+            if (btn)
+                btn.onclick = function() {
+                    setHighlight(DEFAULT_HL);
+                };
 
-/* ── Helpers ──────────────────────────────────────────── */
-function $(id){ return document.getElementById(id); }
-function enrich(d){
-  return {
-    city:d.city, population:d.population, trails:d.trails,
-    areaSqMi:d.areaSqMi, milesAdded5yr:d.milesAdded5yr,
-    milesper10k:+((d.trails/(d.population/10000)).toFixed(1)),
-    popPerMile:+((d.population/d.trails).toFixed(1)),
-    trailsPerSqMi:d.areaSqMi?+((d.trails/d.areaSqMi).toFixed(2)):null,
-    growthPct:(d.milesAdded5yr!=null&&d.trails)?+((d.milesAdded5yr/d.trails*100).toFixed(1)):null
-  };
-}
-function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function fmtN(v){ return (typeof v==="number")?v.toLocaleString(undefined,{maximumFractionDigits:1}):"\u2014"; }
-function fmtShort(v){ return v>=1000?(v/1000).toFixed(1)+"k":String(v); }
-function fmtMoney(v){ return v>=1e6?"$"+(v/1e6).toFixed(1)+"M":"$"+(v/1e3).toFixed(0)+"k"; }
-function cv10k(v){ return S.units==="metric"?v*KM:v; }
-function cvCap(v){ return S.units==="metric"?v/KM:v; }
-function cvTr(v){ return S.units==="metric"?v*KM:v; }
-function firstName(c){ return c.split(",")[0]; }
-function tierOf(p){ for(var i=0;i<TIERS.length;i++){ if(p>=TIERS[i].min&&p<TIERS[i].max) return TIERS[i]; } return null; }
-function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+            var d = S.locs.find(function(l) {
+                return l.city === S.highlight;
+            });
+            if (!d) {
+                $("hlCard").innerHTML = "";
+                return;
+            }
+            var t = tierOf(d.population);
+            var L = UL[S.units];
+            $("hlCard").innerHTML =
+            '<div class="hl-card"><div class="top"><span class="name">&#128205; ' + esc(d.city) + '</span>' +
+            (t ? '<span class="tier">' + t.label + '</span>' : "") + '</div>' +
+            '<div class="hl-stats">' +
+            '<div><div class="k">Population</div><div class="v">' + d.population.toLocaleString() + '</div></div>' +
+            '<div><div class="k">Trail ' + L.trail + '</div><div class="v">' + fmtN(cvTr(d.trails)) + '</div></div>' +
+            '<div><div class="k">' + L.per10k + '</div><div class="v" style="color:var(--blue)">' + fmtN(cv10k(d.milesper10k)) + '</div></div>' +
+            '<div><div class="k">' + L.perCap + '</div><div class="v" style="color:var(--indigo)">' + fmtN(cvCap(d.popPerMile)) + '</div></div>' +
+            '</div></div>';
+        }
 
-function filtered(){
-  if(!S.activeTiers.length) return S.locs.slice();
-  return S.locs.filter(function(l){
-    return S.activeTiers.some(function(id){
-      var t=null; for(var i=0;i<TIERS.length;i++){ if(TIERS[i].id===id){t=TIERS[i];break;} }
-      return t && l.population>=t.min && l.population<t.max;
-    });
-  });
-}
+        function renderTiers() {
+            $("tierHdr").className = "sec-hdr" + (S.open.tier ? " open" : "");
+            $("tierArrow").innerHTML = S.open.tier ? "&#9650;" : "&#9660;";
+            $("tierBody").style.display = S.open.tier ? "block" : "none";
+            $("tierBadge").innerHTML = S.activeTiers.length
+            ? '<span class="badge" style="background:rgba(72,149,239,.18);color:var(--blue)">' + S.activeTiers.length + ' active &middot; ' + filtered().length + ' cities</span>' : "";
 
-/* ── Renders ──────────────────────────────────────────── */
-function renderHeader(){
-  $("cityCount").textContent = S.locs.length;
-  var segBtns = $("unitSeg").querySelectorAll("button");
-  segBtns.forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-u")===S.units); });
-  $("themeSeg").querySelectorAll("button").forEach(function(b){
-    b.classList.toggle("on", b.getAttribute("data-t")===S.theme);
-  });
-}
+            var html = '<button class="pill' + (S.activeTiers.length === 0 ? " on-sub" : "") + '" data-tier="__all">All <span class="cnt">(' + S.locs.length + ')</span></button>';
+            TIERS.forEach(function(t) {
+                var cnt = S.locs.filter(function(l) {
+                    return l.population >= t.min && l.population < t.max;
+                }).length;
+                var on = S.activeTiers.indexOf(t.id) >= 0;
+                html += '<button class="pill' + (on ? " on-blue" : "") + '" data-tier="' + t.id + '">' + t.label + ' <span class="cnt">(' + cnt + ')</span></button>';
+            });
+            $("tierPills").innerHTML = html;
+            $("tierPills").querySelectorAll("button").forEach(function(b) {
+                b.onclick = function() {
+                    var id = b.getAttribute("data-tier");
+                    if (id === "__all") {
+                        S.activeTiers = [];
+                    }
+                    else {
+                        var i = S.activeTiers.indexOf(id);
+                        if (i >= 0)
+                            S.activeTiers.splice(i, 1);
+                        else
+                            S.activeTiers.push(id);
+                    }
+                    renderTiers();
+                    renderChart();
+                };
+            });
+            $("tierSummary").innerHTML = S.activeTiers.length
+            ? 'Showing ' + filtered().length + ' of ' + S.locs.length + ' cities' + (S.activeTiers.length > 1 ? ' <span style="color:var(--blue)">&middot; ' + S.activeTiers.length + ' tiers selected</span>' : "") : "";
+        }
 
-function renderCr(){
-  $("crHdr").className = "sec-hdr"+(S.open.cr?" open":"");
-  $("crArrow").innerHTML = S.open.cr?"&#9650;":"&#9660;";
-  $("crBody").style.display = S.open.cr?"block":"none";
-}
+        function modeInfo() {
+            var L = UL[S.units];
+            return {
+                milesper10k: {
+                    label: L.per10k,
+                    cls: "on-blue",
+                    colorVar: "--blue",
+                    hint: "Higher = more trail per capita. Best performers at top."
+                },
+                popPerMile: {
+                    label: L.perCap,
+                    cls: "on-indigo",
+                    colorVar: "--indigo",
+                    hint: "Lower = less crowded trails. Best performers at top."
+                },
+                scatter: {
+                    label: "Scatter",
+                    cls: "on-violet",
+                    colorVar: "--violet",
+                    hint: "Population vs trail miles (log scale). Tap any dot for details."
+                }
+            };
+        }
 
-function renderTabs(){
-  var addOn = S.panelTab==="add", hlOn = S.panelTab==="highlight";
-  $("tabAdd").className = "tab-btn"+(addOn?" on-add":"");
-  $("tabHl").className  = "tab-btn"+(hlOn?" on-hl":"");
-  $("tabAddArrow").innerHTML = addOn?"&#9650;":"&#9660;";
-  $("tabHlArrow").innerHTML  = hlOn?"&#9650;":"&#9660;";
-  $("tabBar").className = "tab-bar"+(S.panelTab?" open":"");
-  $("addBody").style.display = addOn?"block":"none";
-  $("hlBody").style.display  = hlOn?"block":"none";
+        function renderChart() {
+            $("chartHdr").className = "sec-hdr" + (S.open.chart ? " open" : "");
+            $("chartArrow").innerHTML = S.open.chart ? "&#9650;" : "&#9660;";
+            $("chartBody").style.display = S.open.chart ? "block" : "none";
 
-  var custom = S.locs.length - SEED.length;
-  var rb = $("resetBtn");
-  if(S.confirmRst){ rb.className="reset-btn confirm"; rb.innerHTML="&#9888; Confirm reset?"; }
-  else if(custom>0){ rb.className="reset-btn active"; rb.innerHTML="&#8634; Reset ("+custom+" added)"; }
-  else{ rb.className="reset-btn"; rb.innerHTML="&#8634; Reset"; }
-}
+            var MI = modeInfo(),
+                m = MI[S.metric];
+            $("chartBadge").style.cssText = "background:color-mix(in srgb, var(" + m.colorVar + ") 18%, transparent);color:var(" + m.colorVar + ")";
+            $("chartBadge").textContent = m.label;
+            if (!S.open.chart)
+                return;
 
-function renderHlPanel(){
-  var sel = $("hlSelect");
-  var sorted = S.locs.slice().sort(function(a,b){ return a.city.localeCompare(b.city); });
-  sel.innerHTML = sorted.map(function(l){
-    return '<option value="'+esc(l.city)+'"'+(l.city===S.highlight?" selected":"")+'>'+esc(l.city)+'</option>';
-  }).join("");
-  $("hlResetWrap").innerHTML = (S.highlight!==DEFAULT_HL)
-    ? '<button class="hl-reset" id="hlResetBtn">&larr; Reset to Castle Rock</button>' : "";
-  var btn = $("hlResetBtn");
-  if(btn) btn.onclick = function(){ setHighlight(DEFAULT_HL); };
+            var pills = "";
+            ["milesper10k", "popPerMile", "scatter"].forEach(function(k) {
+                pills += '<button class="pill' + (S.metric === k ? " " + MI[k].cls : "") + '" data-m="' + k + '">' + esc(MI[k].label) + '</button>';
+            });
+            $("modePills").innerHTML = pills;
+            $("modePills").querySelectorAll("button").forEach(function(b) {
+                b.onclick = function() {
+                    S.metric = b.getAttribute("data-m");
+                    renderChart();
+                };
+            });
 
-  var d = S.locs.find(function(l){ return l.city===S.highlight; });
-  if(!d){ $("hlCard").innerHTML=""; return; }
-  var t = tierOf(d.population);
-  var L = UL[S.units];
-  $("hlCard").innerHTML =
-    '<div class="hl-card"><div class="top"><span class="name">&#128205; '+esc(d.city)+'</span>'+
-    (t?'<span class="tier">'+t.label+'</span>':"")+'</div>'+
-    '<div class="hl-stats">'+
-    '<div><div class="k">Population</div><div class="v">'+d.population.toLocaleString()+'</div></div>'+
-    '<div><div class="k">Trail '+L.trail+'</div><div class="v">'+fmtN(cvTr(d.trails))+'</div></div>'+
-    '<div><div class="k">'+L.per10k+'</div><div class="v" style="color:var(--blue)">'+fmtN(cv10k(d.milesper10k))+'</div></div>'+
-    '<div><div class="k">'+L.perCap+'</div><div class="v" style="color:var(--indigo)">'+fmtN(cvCap(d.popPerMile))+'</div></div>'+
-    '</div></div>';
-}
+            $("chartHint").innerHTML = m.hint + (S.metric !== "scatter"
+            ? '<span class="hl-note">Orange bar = ' + esc(firstName(S.highlight)) + '</span>' : "");
 
-function renderTiers(){
-  $("tierHdr").className = "sec-hdr"+(S.open.tier?" open":"");
-  $("tierArrow").innerHTML = S.open.tier?"&#9650;":"&#9660;";
-  $("tierBody").style.display = S.open.tier?"block":"none";
-  $("tierBadge").innerHTML = S.activeTiers.length
-    ? '<span class="badge" style="background:rgba(72,149,239,.18);color:var(--blue)">'+S.activeTiers.length+' active &middot; '+filtered().length+' cities</span>' : "";
+            var f = filtered();
+            if (S.metric === "scatter")
+                renderScatter(f);
+            else
+                renderBars(f);
+        }
 
-  var html = '<button class="pill'+(S.activeTiers.length===0?" on-sub":"")+'" data-tier="__all">All <span class="cnt">('+S.locs.length+')</span></button>';
-  TIERS.forEach(function(t){
-    var cnt = S.locs.filter(function(l){ return l.population>=t.min&&l.population<t.max; }).length;
-    var on = S.activeTiers.indexOf(t.id)>=0;
-    html += '<button class="pill'+(on?" on-blue":"")+'" data-tier="'+t.id+'">'+t.label+' <span class="cnt">('+cnt+')</span></button>';
-  });
-  $("tierPills").innerHTML = html;
-  $("tierPills").querySelectorAll("button").forEach(function(b){
-    b.onclick = function(){
-      var id = b.getAttribute("data-tier");
-      if(id==="__all"){ S.activeTiers=[]; }
-      else{
-        var i = S.activeTiers.indexOf(id);
-        if(i>=0) S.activeTiers.splice(i,1); else S.activeTiers.push(id);
-      }
-      renderTiers(); renderChart();
-    };
-  });
-  $("tierSummary").innerHTML = S.activeTiers.length
-    ? 'Showing '+filtered().length+' of '+S.locs.length+' cities'+(S.activeTiers.length>1?' <span style="color:var(--blue)">&middot; '+S.activeTiers.length+' tiers selected</span>':"") : "";
-}
+        function renderBars(f) {
+            if (!f.length) {
+                $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">No cities in this tier selection.</div>';
+                $("chartLegend").innerHTML = "";
+                return;
+            }
+            var key = S.metric;
+            var desc = key === "milesper10k";
+            var data = f.slice().sort(function(a, b) {
+                return desc ? b[key] - a[key] : a[key] - b[key];
+            });
+            var conv = key === "milesper10k" ? cv10k : cvCap;
+            var max = 0;
+            data.forEach(function(d) {
+                var v = conv(d[key]);
+                if (v > max)
+                    max = v;
+            });
+            var barVar = key === "milesper10k" ? "--blue" : "--indigo";
 
-function modeInfo(){
-  var L = UL[S.units];
-  return {
-    milesper10k:{ label:L.per10k, cls:"on-blue",   colorVar:"--blue",   hint:"Higher = more trail per capita. Best performers at top." },
-    popPerMile:{  label:L.perCap, cls:"on-indigo", colorVar:"--indigo", hint:"Lower = less crowded trails. Best performers at top." },
-    scatter:{     label:"Scatter",cls:"on-violet", colorVar:"--violet", hint:"Population vs trail miles (log scale). Tap any dot for details." }
-  };
-}
+            var rows = data.map(function(d) {
+                var v = conv(d[key]);
+                var pct = max > 0 ? Math.max(0.4, (v / max * 100)) : 0;
+                var hl = d.city === S.highlight;
+                var L = UL[S.units];
+                var tip = esc(d.city) + " \u2014 " + L.per10k + ": " + fmtN(cv10k(d.milesper10k)) + " | " + L.perCap + ": " + fmtN(cvCap(d.popPerMile)) + " | Pop: " + d.population.toLocaleString();
+                return '<div class="bar-row" title="' + tip + '">' +
+                '<div class="bar-label' + (hl ? " hl" : "") + '">' + (hl ? "&#128205; " : "") + esc(d.city) + '</div>' +
+                '<div class="bar-track"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%;background:' + (hl ? "var(--orange)" : "var(" + barVar + ")") + ';opacity:' + (hl ? 1 : .8) + '"></div></div>' +
+                '<div class="bar-val">' + fmtShort(+v.toFixed(1)) + '</div></div>';
+            }).join("");
 
-function renderChart(){
-  $("chartHdr").className = "sec-hdr"+(S.open.chart?" open":"");
-  $("chartArrow").innerHTML = S.open.chart?"&#9650;":"&#9660;";
-  $("chartBody").style.display = S.open.chart?"block":"none";
+            $("chartArea").innerHTML = '<div class="chart-scroll">' + rows + '</div>';
+            $("chartLegend").innerHTML =
+            '<span><span style="color:var(' + barVar + ')">&#9632;</span> All cities</span>' +
+            '<span><span style="color:var(--orange)">&#9632;</span> ' + esc(firstName(S.highlight)) + '</span>' +
+            '<span class="right">Showing ' + f.length + ' of ' + S.locs.length + ' cities</span>';
+        }
 
-  var MI = modeInfo(), m = MI[S.metric];
-  $("chartBadge").style.cssText = "background:color-mix(in srgb, var("+m.colorVar+") 18%, transparent);color:var("+m.colorVar+")";
-  $("chartBadge").textContent = m.label;
-  if(!S.open.chart) return;
+        function renderScatter(f) {
+            if (f.length < 3) {
+                $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">Select a tier with at least 3 cities to show the scatter plot.</div>';
+                $("chartLegend").innerHTML = "";
+                return;
+            }
+            var W = 700,
+                H = 420,
+                padL = 52,
+                padR = 20,
+                padT = 14,
+                padB = 46;
+            var pops = f.map(function(d) {
+                    return d.population;
+                }),
+                trs = f.map(function(d) {
+                    return d.trails;
+                });
+            var lgMin = Math.log10(Math.min.apply(null, pops)) - 0.15,
+                lgMax = Math.log10(Math.max.apply(null, pops)) + 0.15;
+            var yMax = Math.max.apply(null, trs) * 1.12;
+            function X(p) {
+                return padL + (Math.log10(p) - lgMin) / (lgMax - lgMin) * (W - padL - padR);
+            }
+            function Y(t) {
+                return H - padB - (t / yMax) * (H - padT - padB);
+            }
 
-  var pills = "";
-  ["milesper10k","popPerMile","scatter"].forEach(function(k){
-    pills += '<button class="pill'+(S.metric===k?" "+MI[k].cls:"")+'" data-m="'+k+'">'+esc(MI[k].label)+'</button>';
-  });
-  $("modePills").innerHTML = pills;
-  $("modePills").querySelectorAll("button").forEach(function(b){
-    b.onclick = function(){ S.metric = b.getAttribute("data-m"); renderChart(); };
-  });
+            // log-linear regression
+            var n = f.length,
+                xs = f.map(function(d) {
+                    return Math.log10(d.population);
+                }),
+                ys = trs;
+            var xm = xs.reduce(function(a, b) {
+                    return a + b;
+                }, 0) / n,
+                ym = ys.reduce(function(a, b) {
+                    return a + b;
+                }, 0) / n;
+            var sxy = 0,
+                sxx = 0;
+            for (var i = 0; i < n; i++) {
+                sxy += (xs[i] - xm) * (ys[i] - ym);
+                sxx += (xs[i] - xm) * (xs[i] - xm);
+            }
+            var sl = sxx === 0 ? 0 : sxy / sxx,
+                ic = ym - sl * xm;
 
-  $("chartHint").innerHTML = m.hint + (S.metric!=="scatter"
-    ? '<span class="hl-note">Orange bar = '+esc(firstName(S.highlight))+'</span>' : "");
+            var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot of population versus trail miles">';
+            // grid + y ticks
+            var ySteps = 5;
+            for (var yi = 0; yi <= ySteps; yi++) {
+                var tv = yMax / ySteps * yi,
+                    yy = Y(tv);
+                svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="var(--grid)" stroke-dasharray="3 3"/>';
+                svg += '<text x="' + (padL - 7) + '" y="' + (yy + 3) + '" text-anchor="end" font-size="10" fill="var(--dim)">' + Math.round(tv) + '</text>';
+            }
+            // x ticks (decades)
+            [100, 1000, 10000, 100000, 1000000].forEach(function(t) {
+                if (Math.log10(t) >= lgMin && Math.log10(t) <= lgMax) {
+                    var xx = X(t);
+                    svg += '<line x1="' + xx + '" y1="' + padT + '" x2="' + xx + '" y2="' + (H - padB) + '" stroke="var(--grid)" stroke-dasharray="3 3"/>';
+                    svg += '<text x="' + xx + '" y="' + (H - padB + 16) + '" text-anchor="middle" font-size="10" fill="var(--dim)">' + (t >= 1e6 ? (t / 1e6) + "M" : t >= 1000 ? (t / 1000) + "k" : t) + '</text>';
+                }
+            });
+            // axis labels
+            svg += '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="var(--dim)">Population (log scale)</text>';
+            svg += '<text x="14" y="' + ((padT + H - padB) / 2) + '" text-anchor="middle" font-size="10" fill="var(--dim)" transform="rotate(-90 14 ' + ((padT + H - padB) / 2) + ')">Trail Miles</text>';
+            // trend line
+            var pts = [];
+            for (var s = 0; s <= 40; s++) {
+                var lx = lgMin + (lgMax - lgMin) * s / 40,
+                    ty = Math.max(0, sl * lx + ic);
+                pts.push(X(Math.pow(10, lx)).toFixed(1) + "," + Y(Math.min(ty, yMax)).toFixed(1));
+            }
+            svg += '<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="6 3" opacity=".8"/>';
+            // dots (highlight last so it's on top)
+            var ordered = f.slice().sort(function(a, b) {
+                return (a.city === S.highlight) - (b.city === S.highlight);
+            });
+            ordered.forEach(function(d, idx) {
+                var hl = d.city === S.highlight,
+                    cx = X(d.population),
+                    cy = Y(d.trails);
+                svg += '<circle class="sc-dot" data-i="' + S.locs.indexOf(d) + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (hl ? 7 : 5) + '" fill="' + (hl ? "var(--orange)" : "var(--blue)") + '" fill-opacity="' + (hl ? 1 : .65) + '"' + (hl ? ' stroke="rgba(255,255,255,.35)" stroke-width="1.5"' : "") + ' style="cursor:pointer"><title>' + esc(d.city) + '</title></circle>';
+                if (hl)
+                    svg += '<text x="' + (cx + 11) + '" y="' + (cy + 4) + '" font-size="10" font-weight="bold" fill="var(--orange)">' + esc(firstName(d.city)) + '</text>';
+            });
+            svg += '</svg>';
 
-  var f = filtered();
-  if(S.metric==="scatter") renderScatter(f); else renderBars(f);
-}
+            $("chartArea").innerHTML = '<div class="scatter-box">' + svg + '</div><div class="scatter-detail" id="scDetail">Tap or hover a dot to see city details.</div>';
+            $("chartArea").querySelectorAll(".sc-dot").forEach(function(c) {
+                var show = function() {
+                    var d = S.locs[+c.getAttribute("data-i")];
+                    if (!d)
+                        return;
+                    var L = UL[S.units];
+                    $("scDetail").innerHTML = '<strong style="color:' + (d.city === S.highlight ? "var(--orange)" : "var(--text)") + '">' + esc(d.city) + '</strong> &middot; Pop ' + d.population.toLocaleString() + ' &middot; ' + d.trails + ' mi trail &middot; ' + L.per10k + ': ' + fmtN(cv10k(d.milesper10k)) + ' &middot; ' + L.perCap + ': ' + fmtN(cvCap(d.popPerMile));
+                };
+                c.addEventListener("click", show);
+                c.addEventListener("mouseenter", show);
+            });
+            $("chartLegend").innerHTML =
+            '<span><span style="color:var(--blue)">&#9679;</span> All cities</span>' +
+            '<span><span style="color:var(--orange)">&#9679;</span> ' + esc(firstName(S.highlight)) + '</span>' +
+            '<span>&#9548;&#9548; Log-linear trend</span>' +
+            '<span class="right">Showing ' + f.length + ' of ' + S.locs.length + ' cities</span>';
+        }
 
-function renderBars(f){
-  if(!f.length){
-    $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">No cities in this tier selection.</div>';
-    $("chartLegend").innerHTML=""; return;
-  }
-  var key = S.metric;
-  var desc = key==="milesper10k";
-  var data = f.slice().sort(function(a,b){ return desc ? b[key]-a[key] : a[key]-b[key]; });
-  var conv = key==="milesper10k"?cv10k:cvCap;
-  var max = 0;
-  data.forEach(function(d){ var v=conv(d[key]); if(v>max)max=v; });
-  var barVar = key==="milesper10k"?"--blue":"--indigo";
+        /* ── Location map ─────────────────────────────────────── */
+        var US_OUTLINE = [
+        [-124.7, 48.4], [-124.6, 47.0], [-124.1, 46.3], [-124.0, 44.6], [-124.4, 43.0], [-124.2, 41.8], [-124.2, 40.4], [-123.8, 39.4], [-122.9, 38.2], [-122.5, 37.8], [-122.0, 36.9], [-121.9, 36.6], [-120.9, 35.2], [-120.6, 34.5], [-119.7, 34.4], [-118.5, 34.0], [-117.3, 32.7],
+        [-115.0, 32.6], [-114.7, 32.7], [-113.0, 32.0], [-111.0, 31.4], [-108.2, 31.3], [-108.2, 31.8], [-106.5, 31.8], [-105.0, 30.7], [-103.0, 29.0], [-102.4, 29.8], [-101.4, 29.8], [-100.0, 28.2], [-99.5, 27.6], [-97.5, 25.9],
+        [-97.2, 27.4], [-96.5, 28.4], [-95.0, 29.1], [-93.8, 29.7], [-92.0, 29.6], [-91.0, 29.2], [-90.0, 29.2], [-89.2, 29.3], [-88.9, 30.4], [-88.0, 30.4], [-86.5, 30.4], [-85.0, 29.7], [-84.0, 30.1], [-83.7, 29.9], [-82.8, 27.9], [-82.7, 27.5], [-81.8, 26.4], [-81.5, 25.8], [-80.3, 25.2],
+        [-80.1, 26.6], [-80.6, 28.0], [-80.9, 28.4], [-81.2, 29.8], [-81.4, 30.7], [-81.1, 31.8], [-80.8, 32.0], [-79.2, 33.3], [-78.6, 33.9], [-77.0, 34.9], [-76.3, 35.6], [-75.5, 35.6], [-75.9, 36.9], [-76.3, 37.3], [-76.0, 38.0], [-75.1, 38.5], [-74.4, 39.4], [-74.0, 40.5], [-73.9, 40.7], [-72.5, 41.1], [-71.1, 41.5], [-70.7, 41.7], [-70.0, 41.8], [-70.5, 43.0], [-70.2, 43.7], [-69.0, 44.0], [-67.8, 44.6], [-67.0, 44.8],
+        [-67.8, 45.7], [-69.2, 47.4], [-70.3, 46.2], [-71.5, 45.0], [-73.3, 45.0], [-74.7, 45.0], [-75.0, 44.7], [-76.5, 44.0], [-79.0, 43.3], [-79.2, 42.9], [-80.5, 42.3], [-82.5, 41.7], [-83.1, 42.0], [-82.4, 43.0], [-82.5, 45.3], [-84.1, 46.1], [-84.5, 46.5], [-86.4, 46.5], [-88.4, 47.0], [-89.9, 47.3], [-90.5, 46.7], [-92.3, 46.7], [-94.6, 47.4], [-95.0, 49.0], [-97.2, 49.0], [-104.0, 49.0], [-110.0, 49.0], [-116.0, 49.0], [-122.8, 49.0], [-123.0, 48.2], [-124.7, 48.4]
+        ];
+        var MAP = {
+            LON0: -125.0,
+            LON1: -66.5,
+            LAT0: 24.5,
+            LAT1: 50.2,
+            W: 880,
+            H: 500,
+            X: 20,
+            Y: 15,
+            AK: {
+                box: [18, 372, 150, 140],
+                LON0: -168,
+                LON1: -140,
+                LAT0: 54,
+                LAT1: 70
+            },
+            HI: {
+                box: [180, 430, 120, 82],
+                LON0: -160.5,
+                LON1: -154.5,
+                LAT0: 18.8,
+                LAT1: 22.5
+            }
+        };
 
-  var rows = data.map(function(d){
-    var v = conv(d[key]);
-    var pct = max>0 ? Math.max(0.4,(v/max*100)) : 0;
-    var hl = d.city===S.highlight;
-    var L = UL[S.units];
-    var tip = esc(d.city)+" \u2014 "+L.per10k+": "+fmtN(cv10k(d.milesper10k))+" | "+L.perCap+": "+fmtN(cvCap(d.popPerMile))+" | Pop: "+d.population.toLocaleString();
-    return '<div class="bar-row" title="'+tip+'">'+
-      '<div class="bar-label'+(hl?" hl":"")+'">'+(hl?"&#128205; ":"")+esc(d.city)+'</div>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct.toFixed(1)+'%;background:'+(hl?"var(--orange)":"var("+barVar+")")+';opacity:'+(hl?1:.8)+'"></div></div>'+
-      '<div class="bar-val">'+fmtShort(+v.toFixed(1))+'</div></div>';
-  }).join("");
+        function mProj(d) {
+            if (d.region === "ak") {
+                var a = MAP.AK,
+                    b = a.box;
+                return [b[0] + (d.lng - a.LON0) / (a.LON1 - a.LON0) * b[2], b[1] + (a.LAT1 - d.lat) / (a.LAT1 - a.LAT0) * b[3]];
+            }
+            if (d.region === "hi") {
+                var h = MAP.HI,
+                    c = h.box;
+                return [c[0] + (d.lng - h.LON0) / (h.LON1 - h.LON0) * c[2], c[1] + (h.LAT1 - d.lat) / (h.LAT1 - h.LAT0) * c[3]];
+            }
+            return [MAP.X + (d.lng - MAP.LON0) / (MAP.LON1 - MAP.LON0) * MAP.W, MAP.Y + (MAP.LAT1 - d.lat) / (MAP.LAT1 - MAP.LAT0) * MAP.H];
+        }
 
-  $("chartArea").innerHTML = '<div class="chart-scroll">'+rows+'</div>';
-  $("chartLegend").innerHTML =
-    '<span><span style="color:var('+barVar+')">&#9632;</span> All cities</span>'+
-    '<span><span style="color:var(--orange)">&#9632;</span> '+esc(firstName(S.highlight))+'</span>'+
-    '<span class="right">Showing '+f.length+' of '+S.locs.length+' cities</span>';
-}
+        function renderMap() {
+            $("mapHdr").className = "sec-hdr" + (S.open.map ? " open" : "");
+            $("mapArrow").innerHTML = S.open.map ? "&#9650;" : "&#9660;";
+            $("mapBody").style.display = S.open.map ? "block" : "none";
+            var located = S.locs.filter(function(l) {
+                return typeof l.lat === "number" && typeof l.lng === "number";
+            });
+            $("mapCount").textContent = "— " + located.length + " cities";
+            if (!S.open.map)
+                return;
 
-function renderScatter(f){
-  if(f.length<3){
-    $("chartArea").innerHTML = '<div style="padding:30px;text-align:center;color:var(--dim);font-size:13px">Select a tier with at least 3 cities to show the scatter plot.</div>';
-    $("chartLegend").innerHTML=""; return;
-  }
-  var W=700,H=420,padL=52,padR=20,padT=14,padB=46;
-  var pops=f.map(function(d){return d.population;}), trs=f.map(function(d){return d.trails;});
-  var lgMin=Math.log10(Math.min.apply(null,pops))-0.15, lgMax=Math.log10(Math.max.apply(null,pops))+0.15;
-  var yMax=Math.max.apply(null,trs)*1.12;
-  function X(p){ return padL+(Math.log10(p)-lgMin)/(lgMax-lgMin)*(W-padL-padR); }
-  function Y(t){ return H-padB-(t/yMax)*(H-padT-padB); }
+            var W = 920,
+                H = 545;
+            var outline = US_OUTLINE.map(function(p) {
+                var x = MAP.X + (p[0] - MAP.LON0) / (MAP.LON1 - MAP.LON0) * MAP.W;
+                var y = MAP.Y + (MAP.LAT1 - p[1]) / (MAP.LAT1 - MAP.LAT0) * MAP.H;
+                return x.toFixed(1) + "," + y.toFixed(1);
+            }).join(" ");
 
-  // log-linear regression
-  var n=f.length,xs=f.map(function(d){return Math.log10(d.population);}),ys=trs;
-  var xm=xs.reduce(function(a,b){return a+b;},0)/n, ym=ys.reduce(function(a,b){return a+b;},0)/n;
-  var sxy=0,sxx=0;
-  for(var i=0;i<n;i++){ sxy+=(xs[i]-xm)*(ys[i]-ym); sxx+=(xs[i]-xm)*(xs[i]-xm); }
-  var sl=sxx===0?0:sxy/sxx, ic=ym-sl*xm;
+            var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Map of the United States with a dot for each trail town">';
+            svg += '<polygon points="' + outline + '" fill="var(--alt)" stroke="var(--grid)" stroke-width="1.5" stroke-linejoin="round"/>';
+            // AK / HI inset frames
+            [["AK", MAP.AK.box], ["HI", MAP.HI.box]].forEach(function(f) {
+                var b = f[1];
+                svg += '<rect x="' + b[0] + '" y="' + b[1] + '" width="' + b[2] + '" height="' + b[3] + '" rx="6" fill="var(--alt)" stroke="var(--grid)" stroke-width="1" stroke-dasharray="3 3"/>';
+                svg += '<text x="' + (b[0] + 7) + '" y="' + (b[1] + 15) + '" font-size="11" font-weight="700" fill="var(--dim)">' + f[0] + '</text>';
+            });
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scatter plot of population versus trail miles">';
-  // grid + y ticks
-  var ySteps=5;
-  for(var yi=0;yi<=ySteps;yi++){
-    var tv=yMax/ySteps*yi, yy=Y(tv);
-    svg+='<line x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke="var(--grid)" stroke-dasharray="3 3"/>';
-    svg+='<text x="'+(padL-7)+'" y="'+(yy+3)+'" text-anchor="end" font-size="10" fill="var(--dim)">'+Math.round(tv)+'</text>';
-  }
-  // x ticks (decades)
-  [100,1000,10000,100000,1000000].forEach(function(t){
-    if(Math.log10(t)>=lgMin&&Math.log10(t)<=lgMax){
-      var xx=X(t);
-      svg+='<line x1="'+xx+'" y1="'+padT+'" x2="'+xx+'" y2="'+(H-padB)+'" stroke="var(--grid)" stroke-dasharray="3 3"/>';
-      svg+='<text x="'+xx+'" y="'+(H-padB+16)+'" text-anchor="middle" font-size="10" fill="var(--dim)">'+(t>=1e6?(t/1e6)+"M":t>=1000?(t/1000)+"k":t)+'</text>';
-    }
-  });
-  // axis labels
-  svg+='<text x="'+((padL+W-padR)/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--dim)">Population (log scale)</text>';
-  svg+='<text x="14" y="'+((padT+H-padB)/2)+'" text-anchor="middle" font-size="10" fill="var(--dim)" transform="rotate(-90 14 '+((padT+H-padB)/2)+')">Trail Miles</text>';
-  // trend line
-  var pts=[];
-  for(var s=0;s<=40;s++){
-    var lx=lgMin+(lgMax-lgMin)*s/40, ty=Math.max(0,sl*lx+ic);
-    pts.push(X(Math.pow(10,lx)).toFixed(1)+","+Y(Math.min(ty,yMax)).toFixed(1));
-  }
-  svg+='<polyline points="'+pts.join(" ")+'" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="6 3" opacity=".8"/>';
-  // dots (highlight last so it's on top)
-  var ordered=f.slice().sort(function(a,b){ return (a.city===S.highlight)-(b.city===S.highlight); });
-  ordered.forEach(function(d,idx){
-    var hl=d.city===S.highlight, cx=X(d.population), cy=Y(d.trails);
-    svg+='<circle class="sc-dot" data-i="'+S.locs.indexOf(d)+'" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(hl?7:5)+'" fill="'+(hl?"var(--orange)":"var(--blue)")+'" fill-opacity="'+(hl?1:.65)+'"'+(hl?' stroke="rgba(255,255,255,.35)" stroke-width="1.5"':"")+' style="cursor:pointer"><title>'+esc(d.city)+'</title></circle>';
-    if(hl) svg+='<text x="'+(cx+11)+'" y="'+(cy+4)+'" font-size="10" font-weight="bold" fill="var(--orange)">'+esc(firstName(d.city))+'</text>';
-  });
-  svg+='</svg>';
+            // dots (highlight drawn last, on top)
+            var ordered = located.slice().sort(function(a, b) {
+                return (a.city === S.highlight) - (b.city === S.highlight);
+            });
+            ordered.forEach(function(d) {
+                var p = mProj(d),
+                    hl = d.city === S.highlight;
+                svg += '<circle class="mp-dot" data-city="' + esc(d.city) + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (hl ? 7 : 5) + '" fill="' + (hl ? "var(--orange)" : "var(--blue)") + '" fill-opacity="' + (hl ? 1 : .7) + '"' + (hl ? ' stroke="rgba(255,255,255,.4)" stroke-width="1.5"' : "") + ' style="cursor:pointer"><title>' + esc(d.city) + '</title></circle>';
+                if (hl) {
+                    svg += '<text x="' + (p[0] + 11).toFixed(1) + '" y="' + (p[1] + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="var(--orange)">' + esc(firstName(d.city)) + '</text>';
+                }
+            });
+            svg += '</svg>';
 
-  $("chartArea").innerHTML = '<div class="scatter-box">'+svg+'</div><div class="scatter-detail" id="scDetail">Tap or hover a dot to see city details.</div>';
-  $("chartArea").querySelectorAll(".sc-dot").forEach(function(c){
-    var show=function(){
-      var d=S.locs[+c.getAttribute("data-i")];
-      if(!d) return;
-      var L=UL[S.units];
-      $("scDetail").innerHTML='<strong style="color:'+(d.city===S.highlight?"var(--orange)":"var(--text)")+'">'+esc(d.city)+'</strong> &middot; Pop '+d.population.toLocaleString()+' &middot; '+d.trails+' mi trail &middot; '+L.per10k+': '+fmtN(cv10k(d.milesper10k))+' &middot; '+L.perCap+': '+fmtN(cvCap(d.popPerMile));
-    };
-    c.addEventListener("click",show);
-    c.addEventListener("mouseenter",show);
-  });
-  $("chartLegend").innerHTML =
-    '<span><span style="color:var(--blue)">&#9679;</span> All cities</span>'+
-    '<span><span style="color:var(--orange)">&#9679;</span> '+esc(firstName(S.highlight))+'</span>'+
-    '<span>&#9548;&#9548; Log-linear trend</span>'+
-    '<span class="right">Showing '+f.length+' of '+S.locs.length+' cities</span>';
-}
+            $("mapArea").innerHTML = '<div class="scatter-box map-box">' + svg + '</div>';
+            $("mapArea").querySelectorAll(".mp-dot").forEach(function(c) {
+                var show = function() {
+                    var d = S.locs.find(function(l) {
+                        return l.city === c.getAttribute("data-city");
+                    });
+                    if (!d)
+                        return;
+                    var L = UL[S.units];
+                    $("mapDetail").innerHTML = '<strong style="color:' + (d.city === S.highlight ? "var(--orange)" : "var(--text)") + '">' + esc(d.city) + '</strong> &middot; Pop ' + d.population.toLocaleString() + ' &middot; ' + fmtN(cvTr(d.trails)) + ' ' + L.trail + ' trail &middot; ' + L.per10k + ': ' + fmtN(cv10k(d.milesper10k));
+                };
+                c.addEventListener("click", show);
+                c.addEventListener("mouseenter", show);
+            });
+            $("mapLegend").innerHTML =
+            '<span><span style="color:var(--blue)">&#9679;</span> Trail town</span>' +
+            '<span><span style="color:var(--orange)">&#9679;</span> ' + esc(firstName(S.highlight)) + ' (highlighted)</span>' +
+            '<span class="right">Alaska &amp; Hawaii shown in insets</span>';
+        }
 
-function renderGap(){
-  $("gapHdr").className = "sec-hdr"+(S.open.gap?" open":"");
-  $("gapArrow").innerHTML = S.open.gap?"&#9650;":"&#9660;";
-  $("gapBody").style.display = S.open.gap?"block":"none";
-  $("gapHdrCity").textContent = "\u2014 "+S.highlight;
-  if(!S.open.gap) return;
+        function renderGap() {
+            $("gapHdr").className = "sec-hdr" + (S.open.gap ? " open" : "");
+            $("gapArrow").innerHTML = S.open.gap ? "&#9650;" : "&#9660;";
+            $("gapBody").style.display = S.open.gap ? "block" : "none";
+            $("gapHdrCity").textContent = "\u2014 " + S.highlight;
+            if (!S.open.gap)
+                return;
 
-  // benchmark select
-  var sel=$("benchSelect");
-  var opts=S.locs.filter(function(l){return l.city!==S.highlight;})
-    .sort(function(a,b){return a.city.localeCompare(b.city);});
-  if(!opts.some(function(l){return l.city===S.bench;})) S.bench = opts.length?opts[0].city:S.bench;
-  sel.innerHTML = opts.map(function(l){
-    return '<option value="'+esc(l.city)+'"'+(l.city===S.bench?" selected":"")+'>'+esc(l.city)+'</option>';
-  }).join("");
+            // benchmark select
+            var sel = $("benchSelect");
+            var opts = S.locs.filter(function(l) {
+                return l.city !== S.highlight;
+            })
+            .sort(function(a, b) {
+                return a.city.localeCompare(b.city);
+            });
+            if (!opts.some(function(l) {
+                return l.city === S.bench;
+            }))
+                S.bench = opts.length ? opts[0].city : S.bench;
+            sel.innerHTML = opts.map(function(l) {
+                return '<option value="' + esc(l.city) + '"' + (l.city === S.bench ? " selected" : "") + '>' + esc(l.city) + '</option>';
+            }).join("");
 
-  // metric seg
-  var L=UL[S.units];
-  $("gapMetSeg").innerHTML =
-    '<button data-g="milesper10k" class="'+(S.gMet==="milesper10k"?"on":"")+'">'+esc(L.per10k)+'</button>'+
-    '<button data-g="popPerMile" class="'+(S.gMet==="popPerMile"?"on":"")+'">'+esc(L.perCap)+'</button>';
-  $("gapMetSeg").querySelectorAll("button").forEach(function(b){
-    b.onclick=function(){ S.gMet=b.getAttribute("data-g"); renderGap(); };
-  });
+            // metric seg
+            var L = UL[S.units];
+            $("gapMetSeg").innerHTML =
+            '<button data-g="milesper10k" class="' + (S.gMet === "milesper10k" ? "on" : "") + '">' + esc(L.per10k) + '</button>' +
+            '<button data-g="popPerMile" class="' + (S.gMet === "popPerMile" ? "on" : "") + '">' + esc(L.perCap) + '</button>';
+            $("gapMetSeg").querySelectorAll("button").forEach(function(b) {
+                b.onclick = function() {
+                    S.gMet = b.getAttribute("data-g");
+                    renderGap();
+                };
+            });
 
-  var home=S.locs.find(function(l){return l.city===S.highlight;});
-  var bc=S.locs.find(function(l){return l.city===S.bench;});
-  if(!home||!bc){ $("gapResults").innerHTML=""; $("gapNote").innerHTML=""; return; }
+            var home = S.locs.find(function(l) {
+                return l.city === S.highlight;
+            });
+            var bc = S.locs.find(function(l) {
+                return l.city === S.bench;
+            });
+            if (!home || !bc) {
+                $("gapResults").innerHTML = "";
+                $("gapNote").innerHTML = "";
+                return;
+            }
 
-  var cLow=Math.max(1,+$("cLow").value||50000), cHigh=Math.max(1,+$("cHigh").value||150000);
-  var targetMi = S.gMet==="milesper10k" ? bc.milesper10k*(home.population/10000) : home.population/bc.popPerMile;
-  var gapMi=Math.max(0,Math.ceil(targetMi-home.trails));
-  var homeVal=S.gMet==="milesper10k"?home.milesper10k:home.popPerMile;
-  var bVal=S.gMet==="milesper10k"?bc.milesper10k:bc.popPerMile;
-  var metricLbl=S.gMet==="milesper10k"?L.per10k:L.perCap;
+            var cLow = Math.max(1, +$("cLow").value || 50000),
+                cHigh = Math.max(1, +$("cHigh").value || 150000);
+            var targetMi = S.gMet === "milesper10k" ? bc.milesper10k * (home.population / 10000) : home.population / bc.popPerMile;
+            var gapMi = Math.max(0, Math.ceil(targetMi - home.trails));
+            var homeVal = S.gMet === "milesper10k" ? home.milesper10k : home.popPerMile;
+            var bVal = S.gMet === "milesper10k" ? bc.milesper10k : bc.popPerMile;
+            var metricLbl = S.gMet === "milesper10k" ? L.per10k : L.perCap;
 
-  function gapDist(mi){
-    if(S.units==="imperial") return "+"+mi.toLocaleString()+" mi";
-    if(S.units==="metric") return "+"+Math.ceil(mi*KM).toLocaleString()+" km";
-    return "+"+mi.toLocaleString()+" mi / "+Math.ceil(mi*KM).toLocaleString()+" km";
-  }
+            function gapDist(mi) {
+                if (S.units === "imperial")
+                    return "+" + mi.toLocaleString() + " mi";
+                if (S.units === "metric")
+                    return "+" + Math.ceil(mi * KM).toLocaleString() + " km";
+                return "+" + mi.toLocaleString() + " mi / " + Math.ceil(mi * KM).toLocaleString() + " km";
+            }
 
-  if(targetMi<=home.trails){
-    $("gapResults").innerHTML =
-      '<div class="gap-lead"><span style="color:var(--good);font-weight:700">&#10003; '+esc(firstName(S.highlight))+' already leads!</span>'+
-      '<span style="color:var(--sub);margin-left:8px">'+esc(firstName(S.highlight))+"'s "+fmtN(homeVal)+" "+esc(metricLbl)+" beats "+esc(firstName(S.bench))+"'s "+fmtN(bVal)+".</span></div>";
-  } else {
-    var cards=[
-      { lab:firstName(S.highlight)+" Now", val:fmtN(homeVal), sub:metricLbl, color:"var(--orange)", bg:"rgba(249,115,22,.08)", bdr:"rgba(249,115,22,.3)" },
-      { lab:firstName(S.bench)+" (benchmark)", val:fmtN(bVal), sub:metricLbl, color:"var(--blue)", bg:"rgba(72,149,239,.07)", bdr:"rgba(72,149,239,.3)" },
-      { lab:"Distance Needed", val:gapDist(gapMi), sub:"to match benchmark", color:"var(--text)", bg:"var(--alt)", bdr:"var(--border)" },
-      { lab:"Estimated Investment", val:fmtMoney(gapMi*cLow)+" \u2013 "+fmtMoney(gapMi*cHigh), sub:"at $"+(cLow/1000).toFixed(0)+"k\u2013$"+(cHigh/1000).toFixed(0)+"k/mi", color:"var(--text)", bg:"var(--alt)", bdr:"var(--border)", small:true }
-    ];
-    $("gapResults").innerHTML = '<div class="gap-cards">'+cards.map(function(c){
-      return '<div class="gap-card" style="background:'+c.bg+';border-color:'+c.bdr+'">'+
-        '<div class="lab">'+esc(c.lab)+'</div>'+
-        '<div class="val" style="color:'+c.color+(c.small?";font-size:14px":"")+'">'+esc(c.val)+'</div>'+
-        '<div class="sub">'+esc(c.sub)+'</div></div>';
-    }).join("")+'</div>';
-  }
+            if (targetMi <= home.trails) {
+                $("gapResults").innerHTML =
+                '<div class="gap-lead"><span style="color:var(--good);font-weight:700">&#10003; ' + esc(firstName(S.highlight)) + ' already leads!</span>' +
+                '<span style="color:var(--sub);margin-left:8px">' + esc(firstName(S.highlight)) + "'s " + fmtN(homeVal) + " " + esc(metricLbl) + " beats " + esc(firstName(S.bench)) + "'s " + fmtN(bVal) + ".</span></div>";
+            } else {
+                var cards = [
+                {
+                    lab: firstName(S.highlight) + " Now",
+                    val: fmtN(homeVal),
+                    sub: metricLbl,
+                    color: "var(--orange)",
+                    bg: "rgba(249,115,22,.08)",
+                    bdr: "rgba(249,115,22,.3)"
+                },
+                {
+                    lab: firstName(S.bench) + " (benchmark)",
+                    val: fmtN(bVal),
+                    sub: metricLbl,
+                    color: "var(--blue)",
+                    bg: "rgba(72,149,239,.07)",
+                    bdr: "rgba(72,149,239,.3)"
+                },
+                {
+                    lab: "Distance Needed",
+                    val: gapDist(gapMi),
+                    sub: "to match benchmark",
+                    color: "var(--text)",
+                    bg: "var(--alt)",
+                    bdr: "var(--border)"
+                },
+                {
+                    lab: "Estimated Investment",
+                    val: fmtMoney(gapMi * cLow) + " \u2013 " + fmtMoney(gapMi * cHigh),
+                    sub: "at $" + (cLow / 1000).toFixed(0) + "k\u2013$" + (cHigh / 1000).toFixed(0) + "k/mi",
+                    color: "var(--text)",
+                    bg: "var(--alt)",
+                    bdr: "var(--border)",
+                    small: true
+                }
+                ];
+                $("gapResults").innerHTML = '<div class="gap-cards">' + cards.map(function(c) {
+                    return '<div class="gap-card" style="background:' + c.bg + ';border-color:' + c.bdr + '">' +
+                    '<div class="lab">' + esc(c.lab) + '</div>' +
+                    '<div class="val" style="color:' + c.color + (c.small ? ";font-size:14px" : "") + '">' + esc(c.val) + '</div>' +
+                    '<div class="sub">' + esc(c.sub) + '</div></div>';
+                }).join("") + '</div>';
+            }
 
-  // population comparison note
-  function placeType(p){ return p<1000?"village":p<20000?"town":"city"; }
-  function fp(n){ return n>=10000?(n/1000).toFixed(0)+"k":n.toLocaleString(); }
-  var warn = (home.population/bc.population>=5)
-    ? '<span class="warn">Large population differences can make per-capita comparisons misleading \u2014 consider filtering to a similar-size tier.</span>' : "";
-  $("gapNote").innerHTML =
-    '<div class="gap-note">&#8505;&#65039; You are comparing <strong>'+esc(S.highlight)+'</strong>, a '+placeType(home.population)+' of <strong>'+fp(home.population)+'</strong>, to <strong>'+esc(S.bench)+'</strong>, a '+placeType(bc.population)+' of <strong>'+fp(bc.population)+'</strong>.'+warn+'</div>';
-}
+            // population comparison note
+            function placeType(p) {
+                return p < 1000 ? "village" : p < 20000 ? "town" : "city";
+            }
+            function fp(n) {
+                return n >= 10000 ? (n / 1000).toFixed(0) + "k" : n.toLocaleString();
+            }
+            var warn = (home.population / bc.population >= 5)
+            ? '<span class="warn">Large population differences can make per-capita comparisons misleading \u2014 consider filtering to a similar-size tier.</span>' : "";
+            $("gapNote").innerHTML =
+            '<div class="gap-note">&#8505;&#65039; You are comparing <strong>' + esc(S.highlight) + '</strong>, a ' + placeType(home.population) + ' of <strong>' + fp(home.population) + '</strong>, to <strong>' + esc(S.bench) + '</strong>, a ' + placeType(bc.population) + ' of <strong>' + fp(bc.population) + '</strong>.' + warn + '</div>';
+        }
 
-function renderTable(){
-  $("tblHdr").className = "sec-hdr"+(S.open.tbl?" open":"");
-  $("tblArrow").innerHTML = S.open.tbl?"&#9650;":"&#9660;";
-  $("tblBody").style.display = S.open.tbl?"block":"none";
-  $("tblCount").textContent = S.locs.length+" cities \u00b7 click columns to sort";
-  if(!S.open.tbl) return;
+        function renderTable() {
+            $("tblHdr").className = "sec-hdr" + (S.open.tbl ? " open" : "");
+            $("tblArrow").innerHTML = S.open.tbl ? "&#9650;" : "&#9660;";
+            $("tblBody").style.display = S.open.tbl ? "block" : "none";
+            $("tblCount").textContent = S.locs.length + " cities \u00b7 click columns to sort";
+            if (!S.open.tbl)
+                return;
 
-  var L=UL[S.units];
-  $("tblUnitNote").innerHTML = S.units==="both"?' <span style="color:var(--blue)">Numeric cells: imp \u00b7 metric</span>':"";
-  var COLS=[
-    { key:"city",          label:"City",              align:"left" },
-    { key:"population",    label:"Population",        align:"right" },
-    { key:"trails",        label:"Trail "+L.trail,    align:"right" },
-    { key:"milesper10k",   label:L.per10k,            align:"right" },
-    { key:"popPerMile",    label:L.perCap,            align:"right" },
-    { key:"trailsPerSqMi", label:"Trail / sq mi",     align:"right" },
-    { key:"milesAdded5yr", label:"5yr Growth",        align:"right" }
-  ];
-  $("tblHead").innerHTML = COLS.map(function(c){
-    var act=S.tSort.key===c.key;
-    var arrow=act?(S.tSort.dir==="asc"?"&#9650;":"&#9660;"):"&#8645;";
-    return '<th class="'+(act?"active":"")+'" data-k="'+c.key+'" style="text-align:'+c.align+'">'+esc(c.label)+' <span style="font-size:9px">'+arrow+'</span></th>';
-  }).join("");
-  $("tblHead").querySelectorAll("th").forEach(function(th){
-    th.onclick=function(){
-      var k=th.getAttribute("data-k");
-      if(S.tSort.key===k) S.tSort.dir = S.tSort.dir==="desc"?"asc":"desc";
-      else S.tSort={key:k,dir:"desc"};
-      renderTable();
-    };
-  });
+            var L = UL[S.units];
+            $("tblUnitNote").innerHTML = S.units === "both" ? ' <span style="color:var(--blue)">Numeric cells: imp \u00b7 metric</span>' : "";
+            var COLS = [
+            {
+                key: "city",
+                label: "City",
+                align: "left"
+            },
+            {
+                key: "population",
+                label: "Population",
+                align: "right"
+            },
+            {
+                key: "trails",
+                label: "Trail " + L.trail,
+                align: "right"
+            },
+            {
+                key: "milesper10k",
+                label: L.per10k,
+                align: "right"
+            },
+            {
+                key: "popPerMile",
+                label: L.perCap,
+                align: "right"
+            },
+            {
+                key: "trailsPerSqMi",
+                label: "Trail / sq mi",
+                align: "right"
+            },
+            {
+                key: "milesAdded5yr",
+                label: "5yr Growth",
+                align: "right"
+            }
+            ];
+            $("tblHead").innerHTML = COLS.map(function(c) {
+                var act = S.tSort.key === c.key;
+                var arrow = act ? (S.tSort.dir === "asc" ? "&#9650;" : "&#9660;") : "&#8645;";
+                return '<th class="' + (act ? "active" : "") + '" data-k="' + c.key + '" style="text-align:' + c.align + '">' + esc(c.label) + ' <span style="font-size:9px">' + arrow + '</span></th>';
+            }).join("");
+            $("tblHead").querySelectorAll("th").forEach(function(th) {
+                th.onclick = function() {
+                    var k = th.getAttribute("data-k");
+                    if (S.tSort.key === k)
+                        S.tSort.dir = S.tSort.dir === "desc" ? "asc" : "desc";
+                    else
+                        S.tSort = {
+                            key: k,
+                            dir: "desc"
+                        };
+                    renderTable();
+                };
+            });
 
-  var key=S.tSort.key, mdir=S.tSort.dir==="asc"?1:-1;
-  var rows=S.locs.slice().sort(function(a,b){
-    if(typeof a[key]==="string") return mdir*a[key].localeCompare(b[key]);
-    var av=a[key]==null?-Infinity:a[key], bv=b[key]==null?-Infinity:b[key];
-    return mdir*(av-bv);
-  });
+            var key = S.tSort.key,
+                mdir = S.tSort.dir === "asc" ? 1 : -1;
+            var rows = S.locs.slice().sort(function(a, b) {
+                if (typeof a[key] === "string")
+                    return mdir * a[key].localeCompare(b[key]);
+                var av = a[key] == null ? -Infinity : a[key],
+                    bv = b[key] == null ? -Infinity : b[key];
+                return mdir * (av - bv);
+            });
 
-  function cellTrail(mi){
-    if(S.units==="both") return mi+" \u00b7 "+(mi*KM).toFixed(1);
-    return S.units==="metric"?(mi*KM).toFixed(1):String(mi);
-  }
-  function cell10k(v){ return S.units==="both"?fmtN(v)+" \u00b7 "+fmtN(v*KM):fmtN(cv10k(v)); }
-  function cellCap(v){ return S.units==="both"?fmtN(v)+" \u00b7 "+fmtN(v/KM):fmtN(cvCap(v)); }
+            function cellTrail(mi) {
+                if (S.units === "both")
+                    return mi + " \u00b7 " + (mi * KM).toFixed(1);
+                return S.units === "metric" ? (mi * KM).toFixed(1) : String(mi);
+            }
+            function cell10k(v) {
+                return S.units === "both" ? fmtN(v) + " \u00b7 " + fmtN(v * KM) : fmtN(cv10k(v));
+            }
+            function cellCap(v) {
+                return S.units === "both" ? fmtN(v) + " \u00b7 " + fmtN(v / KM) : fmtN(cvCap(v));
+            }
 
-  $("tblRows").innerHTML = rows.map(function(r,i){
-    var hl=r.city===S.highlight;
-    var c10k=r.milesper10k>=100?"var(--good)":r.milesper10k>=15?"var(--mid)":"var(--poor)";
-    var cPop=r.popPerMile<=50?"var(--good)":r.popPerMile<=500?"var(--mid)":"var(--poor)";
-    var cDen=r.trailsPerSqMi!=null?(r.trailsPerSqMi>=10?"var(--good)":r.trailsPerSqMi>=2?"var(--mid)":"var(--poor)"):"var(--border)";
-    var cGrw=r.milesAdded5yr!=null?(r.growthPct>=50?"var(--good)":"var(--mid)"):"var(--border)";
-    return '<tr class="'+(hl?"hl-row":(i%2?"alt":""))+'">'+
-      '<td>'+(hl?"&#128205; ":"")+esc(r.city)+'</td>'+
-      '<td class="num" style="color:var(--sub)">'+r.population.toLocaleString()+'</td>'+
-      '<td class="num" style="color:var(--sub)">'+cellTrail(r.trails)+'</td>'+
-      '<td class="num" style="color:'+c10k+'">'+cell10k(r.milesper10k)+'</td>'+
-      '<td class="num" style="color:'+cPop+'">'+cellCap(r.popPerMile)+'</td>'+
-      '<td class="num" style="color:'+cDen+'">'+(r.trailsPerSqMi!=null?fmtN(r.trailsPerSqMi):"\u2014")+'</td>'+
-      '<td class="num" style="color:'+cGrw+'">'+(r.milesAdded5yr!=null?"+"+r.milesAdded5yr+" mi":"\u2014")+'</td></tr>';
-  }).join("");
-}
+            $("tblRows").innerHTML = rows.map(function(r, i) {
+                var hl = r.city === S.highlight;
+                var c10k = r.milesper10k >= 100 ? "var(--good)" : r.milesper10k >= 15 ? "var(--mid)" : "var(--poor)";
+                var cPop = r.popPerMile <= 50 ? "var(--good)" : r.popPerMile <= 500 ? "var(--mid)" : "var(--poor)";
+                var cDen = r.trailsPerSqMi != null ? (r.trailsPerSqMi >= 10 ? "var(--good)" : r.trailsPerSqMi >= 2 ? "var(--mid)" : "var(--poor)") : "var(--border)";
+                var cGrw = r.milesAdded5yr != null ? (r.growthPct >= 50 ? "var(--good)" : "var(--mid)") : "var(--border)";
+                return '<tr class="' + (hl ? "hl-row" : (i % 2 ? "alt" : "")) + '">' +
+                '<td>' + (hl ? "&#128205; " : "") + esc(r.city) + '</td>' +
+                '<td class="num" style="color:var(--sub)">' + r.population.toLocaleString() + '</td>' +
+                '<td class="num" style="color:var(--sub)">' + cellTrail(r.trails) + '</td>' +
+                '<td class="num" style="color:' + c10k + '">' + cell10k(r.milesper10k) + '</td>' +
+                '<td class="num" style="color:' + cPop + '">' + cellCap(r.popPerMile) + '</td>' +
+                '<td class="num" style="color:' + cDen + '">' + (r.trailsPerSqMi != null ? fmtN(r.trailsPerSqMi) : "\u2014") + '</td>' +
+                '<td class="num" style="color:' + cGrw + '">' + (r.milesAdded5yr != null ? "+" + r.milesAdded5yr + " mi" : "\u2014") + '</td></tr>';
+            }).join("");
+        }
 
-function renderAll(){
-  renderHeader(); renderTabs(); renderHlPanel();
-  renderTiers(); renderChart(); renderGap(); renderTable(); renderCr();
-  updateURL();
-}
+        function renderAll() {
+            renderHeader();
+            renderTabs();
+            renderHlPanel();
+            renderTiers();
+            renderChart();
+            renderMap();
+            renderGap();
+            renderTable();
+            renderCr();
+            updateURL();
+        }
 
-/* ── Shareable URL state ──────────────────────────────── */
-function updateURL(){
-  try{
-    var p = new URLSearchParams();
-    p.set("units", S.units);
-    p.set("theme", S.theme);
-    if(S.activeTiers.length) p.set("tiers", S.activeTiers.join(","));
-    p.set("hl", S.highlight);
-    p.set("bench", S.bench);
-    p.set("metric", S.metric);
-    p.set("gmet", S.gMet);
-    if($("cLow") && $("cLow").value) p.set("clow", $("cLow").value);
-    if($("cHigh") && $("cHigh").value) p.set("chigh", $("cHigh").value);
-    history.replaceState(null, "", "?"+p.toString());
-  }catch(e){}
-}
+        /* ── Shareable URL state ──────────────────────────────── */
+        function updateURL() {
+            try {
+                var p = new URLSearchParams();
+                p.set("units", S.units);
+                p.set("theme", S.theme);
+                if (S.activeTiers.length)
+                    p.set("tiers", S.activeTiers.join(","));
+                p.set("hl", S.highlight);
+                p.set("bench", S.bench);
+                p.set("metric", S.metric);
+                p.set("gmet", S.gMet);
+                if ($("cLow") && $("cLow").value)
+                    p.set("clow", $("cLow").value);
+                if ($("cHigh") && $("cHigh").value)
+                    p.set("chigh", $("cHigh").value);
+                history.replaceState(null, "", "?" + p.toString());
+            } catch (e) {}
+        }
 
-function decodeURLState(){
-  try{
-    var p = new URLSearchParams(window.location.search);
-    if(!p.toString()) return;
-    if(p.has("units") && UL[p.get("units")]) S.units = p.get("units");
-    if(p.has("theme") && THEMES.indexOf(p.get("theme"))>=0) S.theme = p.get("theme");
-    if(p.has("tiers")){
-      S.activeTiers = p.get("tiers").split(",").filter(function(id){
-        return TIERS.some(function(t){ return t.id===id; });
-      });
-    }
-    if(p.has("hl") && S.locs.some(function(l){ return l.city===p.get("hl"); })) S.highlight = p.get("hl");
-    if(p.has("bench") && S.locs.some(function(l){ return l.city===p.get("bench"); })) S.bench = p.get("bench");
-    if(p.has("metric") && ["milesper10k","popPerMile","scatter"].indexOf(p.get("metric"))>=0) S.metric = p.get("metric");
-    if(p.has("gmet") && ["milesper10k","popPerMile"].indexOf(p.get("gmet"))>=0) S.gMet = p.get("gmet");
-    if(p.has("clow")) $("cLow").value = p.get("clow");
-    if(p.has("chigh")) $("cHigh").value = p.get("chigh");
-  }catch(e){}
-}
+        function decodeURLState() {
+            try {
+                var p = new URLSearchParams(window.location.search);
+                if (!p.toString())
+                    return;
+                if (p.has("units") && UL[p.get("units")])
+                    S.units = p.get("units");
+                if (p.has("theme") && THEMES.indexOf(p.get("theme")) >= 0)
+                    S.theme = p.get("theme");
+                if (p.has("tiers")) {
+                    S.activeTiers = p.get("tiers").split(",").filter(function(id) {
+                        return TIERS.some(function(t) {
+                            return t.id === id;
+                        });
+                    });
+                }
+                if (p.has("hl") && S.locs.some(function(l) {
+                    return l.city === p.get("hl");
+                }))
+                    S.highlight = p.get("hl");
+                if (p.has("bench") && S.locs.some(function(l) {
+                    return l.city === p.get("bench");
+                }))
+                    S.bench = p.get("bench");
+                if (p.has("metric") && ["milesper10k", "popPerMile", "scatter"].indexOf(p.get("metric")) >= 0)
+                    S.metric = p.get("metric");
+                if (p.has("gmet") && ["milesper10k", "popPerMile"].indexOf(p.get("gmet")) >= 0)
+                    S.gMet = p.get("gmet");
+                if (p.has("clow"))
+                    $("cLow").value = p.get("clow");
+                if (p.has("chigh"))
+                    $("cHigh").value = p.get("chigh");
+            } catch (e) {}
+        }
 
-function fallbackCopy(text){
-  try{
-    var ta=document.createElement("textarea");
-    ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
-    document.body.appendChild(ta); ta.select(); document.execCommand("copy");
-    document.body.removeChild(ta);
-  }catch(e){}
-}
+        function fallbackCopy(text) {
+            try {
+                var ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+            } catch (e) {}
+        }
 
-function copyLink(){
-  updateURL();
-  var url = window.location.href;
-  var btn = $("copyLinkBtn"), orig = btn.innerHTML;
-  function done(){
-    btn.innerHTML = "&#10003; Copied!"; btn.classList.add("copied");
-    setTimeout(function(){ btn.innerHTML=orig; btn.classList.remove("copied"); }, 2000);
-  }
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(url).then(done).catch(function(){ fallbackCopy(url); done(); });
-  } else {
-    fallbackCopy(url); done();
-  }
-}
+        function copyLink() {
+            updateURL();
+            var url = window.location.href;
+            var btn = $("copyLinkBtn"),
+                orig = btn.innerHTML;
+            function done() {
+                btn.innerHTML = "&#10003; Copied!";
+                btn.classList.add("copied");
+                setTimeout(function() {
+                    btn.innerHTML = orig;
+                    btn.classList.remove("copied");
+                }, 2000);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(function() {
+                    fallbackCopy(url);
+                    done();
+                });
+            } else {
+                fallbackCopy(url);
+                done();
+            }
+        }
 
-function exportPDF(){
-  var tiersTxt = S.activeTiers.length
-    ? S.activeTiers.map(function(id){
-        var t = TIERS.find(function(x){ return x.id===id; });
-        return t ? t.label : id;
-      }).join(", ")
-    : "All population tiers";
-  var now = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
-  $("printSummary").innerHTML =
-    "<strong>Singletrack Density &mdash; Trail Access Report</strong> &middot; Generated "+esc(now)+"<br>"+
-    "Highlighted city: <strong>"+esc(S.highlight)+"</strong> &middot; Benchmark: <strong>"+esc(S.bench)+"</strong> &middot; "+
-    "Population filter: <strong>"+esc(tiersTxt)+"</strong> &middot; Units: <strong>"+esc(S.units)+"</strong>";
-  window.print();
-}
+        function exportPDF() {
+            var tiersTxt = S.activeTiers.length
+            ? S.activeTiers.map(function(id) {
+                var t = TIERS.find(function(x) {
+                    return x.id === id;
+                });
+                return t ? t.label : id;
+            }).join(", ")
+            : "All population tiers";
+            var now = new Date().toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            });
+            $("printSummary").innerHTML =
+            "<strong>Singletrack Density &mdash; Trail Access Report</strong> &middot; Generated " + esc(now) + "<br>" +
+            "Highlighted city: <strong>" + esc(S.highlight) + "</strong> &middot; Benchmark: <strong>" + esc(S.bench) + "</strong> &middot; " +
+            "Population filter: <strong>" + esc(tiersTxt) + "</strong> &middot; Units: <strong>" + esc(S.units) + "</strong>";
+            window.print();
+        }
 
-/* ── Actions ──────────────────────────────────────────── */
-function setHighlight(city){
-  S.highlight=city;
-  if(S.bench===city){
-    var alt=S.locs.find(function(l){return l.city!==city;});
-    S.bench=alt?alt.city:DEFAULT_BENCH;
-  }
-  renderAll();
-}
+        /* ── Actions ──────────────────────────────────────────── */
+        function setHighlight(city) {
+            S.highlight = city;
+            if (S.bench === city) {
+                var alt = S.locs.find(function(l) {
+                    return l.city !== city;
+                });
+                S.bench = alt ? alt.city : DEFAULT_BENCH;
+            }
+            renderAll();
+        }
 
-function addLocation(){
-  var city=$("fCity").value.trim(), pop=+$("fPop").value, tr=+$("fTrails").value;
-  var area=$("fArea").value?+$("fArea").value:null, grw=$("fGrowth").value?+$("fGrowth").value:null;
-  var ok=true;
-  function err(id,msg){ $(id.replace("f","e")).textContent=msg; $(id).classList.add("err"); ok=false; }
-  function clr(id){ var e=$(id.replace("f","e")); if(e)e.textContent=""; $(id).classList.remove("err"); }
-  ["fCity","fPop","fTrails","fArea"].forEach(clr);
-  if(!city) err("fCity","Required");
-  if(!pop||pop<=0) err("fPop","Must be > 0");
-  if(!tr||tr<=0) err("fTrails","Must be > 0");
-  if($("fArea").value&&area<=0) err("fArea","Must be > 0");
-  if(!ok) return;
-  S.locs.push(enrich({city:city,population:pop,trails:tr,areaSqMi:area,milesAdded5yr:grw}));
-  ["fCity","fPop","fTrails","fArea","fGrowth"].forEach(function(id){ $(id).value=""; });
-  renderAll();
-}
+        function addLocation() {
+            var city = $("fCity").value.trim(),
+                pop = +$("fPop").value,
+                tr = +$("fTrails").value;
+            var area = $("fArea").value ? +$("fArea").value : null,
+                grw = $("fGrowth").value ? +$("fGrowth").value : null;
+            var ok = true;
+            function err(id, msg) {
+                $(id.replace("f", "e")).textContent = msg;
+                $(id).classList.add("err");
+                ok = false;
+            }
+            function clr(id) {
+                var e = $(id.replace("f", "e"));
+                if (e)
+                    e.textContent = "";
+                $(id).classList.remove("err");
+            }
+            ["fCity", "fPop", "fTrails", "fArea"].forEach(clr);
+            if (!city)
+                err("fCity", "Required");
+            if (!pop || pop <= 0)
+                err("fPop", "Must be > 0");
+            if (!tr || tr <= 0)
+                err("fTrails", "Must be > 0");
+            if ($("fArea").value && area <= 0)
+                err("fArea", "Must be > 0");
+            if (!ok)
+                return;
+            S.locs.push(enrich({
+                city: city,
+                population: pop,
+                trails: tr,
+                areaSqMi: area,
+                milesAdded5yr: grw
+            }));
+            ["fCity", "fPop", "fTrails", "fArea", "fGrowth"].forEach(function(id) {
+                $(id).value = "";
+            });
+            renderAll();
+        }
 
-function doReset(){
-  var custom=S.locs.length-SEED.length;
-  if(custom<=0) return;
-  if(!S.confirmRst){
-    S.confirmRst=true; renderTabs();
-    clearTimeout(S.confirmTimer);
-    S.confirmTimer=setTimeout(function(){ S.confirmRst=false; renderTabs(); },3000);
-    return;
-  }
-  clearTimeout(S.confirmTimer);
-  S.confirmRst=false;
-  S.locs=SEED.map(enrich);
-  if(!S.locs.some(function(l){return l.city===S.highlight;})) S.highlight=DEFAULT_HL;
-  if(!S.locs.some(function(l){return l.city===S.bench&&l.city!==S.highlight;})) S.bench=DEFAULT_BENCH;
-  renderAll();
-}
+        function doReset() {
+            var custom = S.locs.length - SEED.length;
+            if (custom <= 0)
+                return;
+            if (!S.confirmRst) {
+                S.confirmRst = true;
+                renderTabs();
+                clearTimeout(S.confirmTimer);
+                S.confirmTimer = setTimeout(function() {
+                    S.confirmRst = false;
+                    renderTabs();
+                }, 3000);
+                return;
+            }
+            clearTimeout(S.confirmTimer);
+            S.confirmRst = false;
+            S.locs = SEED.map(enrich);
+            if (!S.locs.some(function(l) {
+                return l.city === S.highlight;
+            }))
+                S.highlight = DEFAULT_HL;
+            if (!S.locs.some(function(l) {
+                return l.city === S.bench && l.city !== S.highlight;
+            }))
+                S.bench = DEFAULT_BENCH;
+            renderAll();
+        }
 
-/* ── Wire up ──────────────────────────────────────────── */
-S.locs = SEED.map(enrich);
-decodeURLState();
-document.documentElement.setAttribute("data-theme",S.theme);
+        /* ── Wire up ──────────────────────────────────────────── */
+        S.locs = SEED.map(enrich);
+        decodeURLState();
+        document.documentElement.setAttribute("data-theme", S.theme);
 
-$("unitSeg").querySelectorAll("button").forEach(function(b){
-  b.onclick=function(){ S.units=b.getAttribute("data-u"); renderAll(); };
-});
-$("themeSeg").querySelectorAll("button").forEach(function(b){
-  b.onclick=function(){
-    S.theme = b.getAttribute("data-t");
-    document.documentElement.setAttribute("data-theme",S.theme);
-    renderHeader(); renderChart(); updateURL();
-  };
-});
-$("copyLinkBtn").onclick=copyLink;
-$("exportPdfBtn").onclick=exportPDF;
-$("tabAdd").onclick=function(){ S.panelTab=S.panelTab==="add"?null:"add"; renderTabs(); };
-$("tabHl").onclick=function(){ S.panelTab=S.panelTab==="highlight"?null:"highlight"; renderHlPanel(); renderTabs(); };
-$("resetBtn").onclick=doReset;
-$("addBtn").onclick=addLocation;
-$("hlSelect").onchange=function(){ setHighlight(this.value); };
-$("benchSelect").onchange=function(){ S.bench=this.value; renderGap(); updateURL(); };
-$("cLow").addEventListener("input",function(){ renderGap(); updateURL(); });
-$("cHigh").addEventListener("input",function(){ renderGap(); updateURL(); });
-$("tierHdr").onclick=function(){ S.open.tier=!S.open.tier; renderTiers(); };
-$("chartHdr").onclick=function(){ S.open.chart=!S.open.chart; renderChart(); };
-$("gapHdr").onclick=function(){ S.open.gap=!S.open.gap; renderGap(); };
-$("tblHdr").onclick=function(){ S.open.tbl=!S.open.tbl; renderTable(); };
-$("crHdr").onclick=function(){ S.open.cr=!S.open.cr; renderCr(); };
+        $("unitSeg").querySelectorAll("button").forEach(function(b) {
+            b.onclick = function() {
+                S.units = b.getAttribute("data-u");
+                renderAll();
+            };
+        });
+        $("themeSeg").querySelectorAll("button").forEach(function(b) {
+            b.onclick = function() {
+                S.theme = b.getAttribute("data-t");
+                document.documentElement.setAttribute("data-theme", S.theme);
+                renderHeader();
+                renderChart();
+                updateURL();
+            };
+        });
+        $("copyLinkBtn").onclick = copyLink;
+        $("exportPdfBtn").onclick = exportPDF;
+        $("tabAdd").onclick = function() {
+            S.panelTab = S.panelTab === "add" ? null : "add";
+            renderTabs();
+        };
+        $("tabHl").onclick = function() {
+            S.panelTab = S.panelTab === "highlight" ? null : "highlight";
+            renderHlPanel();
+            renderTabs();
+        };
+        $("resetBtn").onclick = doReset;
+        $("addBtn").onclick = addLocation;
+        $("hlSelect").onchange = function() {
+            setHighlight(this.value);
+        };
+        $("benchSelect").onchange = function() {
+            S.bench = this.value;
+            renderGap();
+            updateURL();
+        };
+        $("cLow").addEventListener("input", function() {
+            renderGap();
+            updateURL();
+        });
+        $("cHigh").addEventListener("input", function() {
+            renderGap();
+            updateURL();
+        });
+        $("tierHdr").onclick = function() {
+            S.open.tier = !S.open.tier;
+            renderTiers();
+        };
+        $("chartHdr").onclick = function() {
+            S.open.chart = !S.open.chart;
+            renderChart();
+        };
+        $("gapHdr").onclick = function() {
+            S.open.gap = !S.open.gap;
+            renderGap();
+        };
+        $("tblHdr").onclick = function() {
+            S.open.tbl = !S.open.tbl;
+            renderTable();
+        };
+        $("crHdr").onclick = function() {
+            S.open.cr = !S.open.cr;
+            renderCr();
+        };
+        $("mapHdr").onclick = function() {
+            S.open.map = !S.open.map;
+            renderMap();
+        };
 
-renderAll();
-</script>
+        renderAll();
+        </script>
+    </body>
+    </html>
+
 </body>
 </html>
